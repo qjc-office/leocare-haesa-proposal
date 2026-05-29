@@ -6,7 +6,8 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>QJC × 레오케어 — 해군사관학교 AI 체력관리 시스템 프론트엔드 제안</title>
 
-  <!-- Pretendard Font -->
+  <!-- Pretendard Variable Font -->
+  <link rel="preload" as="style" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 
   <!-- Tailwind CSS CDN -->
@@ -28,6 +29,7 @@
               700: '#143050',
               800: '#0e2440',
               900: '#081830',
+              950: '#040c1c',
             },
             gold: {
               DEFAULT: '#e8a020',
@@ -36,7 +38,7 @@
             },
           },
           fontFamily: {
-            sans: ['Pretendard Variable', 'Pretendard', '-apple-system', 'system-ui', 'sans-serif'],
+            sans: ['Pretendard Variable', 'Pretendard', '-apple-system', 'Apple SD Gothic Neo', 'system-ui', 'sans-serif'],
           },
         },
       },
@@ -44,13 +46,35 @@
   </script>
 
   <style>
+    /* ---- CSS Design Tokens (Motion System) ---- */
+    :root {
+      --dur-fast: 150ms;
+      --dur-base: 250ms;
+      --dur-slow: 420ms;
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+      --c-bg:        #081830;
+      --c-surface:   #0d2040;
+      --c-surface2:  #0a1e3c;
+      --c-border:    rgba(74,131,185,0.18);
+      --c-border-hi: rgba(74,131,185,0.45);
+      --c-text:      #e8edf2;
+      --c-text-sub:  #7aa2cb;
+      --c-text-muted:#4e83b9;
+      --c-gold:      #e8a020;
+      --c-gold-lt:   #f5c665;
+      --c-accent:    #2d6a9f;
+    }
+
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
-      font-family: 'Pretendard Variable', 'Pretendard', -apple-system, system-ui, sans-serif;
-      background: #081830;
-      color: #e8edf2;
+      font-family: 'Pretendard Variable', 'Pretendard', -apple-system, 'Apple SD Gothic Neo', system-ui, sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
       line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ---- Nav ---- */
@@ -61,7 +85,7 @@
       font-weight: 500;
       padding: 0.375rem 0.75rem;
       border-radius: 6px;
-      transition: color 0.15s, background 0.15s;
+      transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
     }
     .nav-link:hover { color: #f5c665; background: rgba(255,255,255,0.07); }
 
@@ -80,238 +104,293 @@
     .badge-gold  { background: rgba(184,125,16,0.25); color: #f5c665; border: 1px solid rgba(232,160,32,0.4); }
     .badge-urgent{ background: rgba(192,57,43,0.2);  color: #e57373; border: 1px solid rgba(192,57,43,0.4); }
 
-    /* ---- Section titles ---- */
+    /* ---- Section label ---- */
     .section-label {
       font-size: 0.7rem;
       letter-spacing: 0.14em;
       font-weight: 700;
       text-transform: uppercase;
       color: #e8a020;
+      margin-bottom: 0.6rem;
     }
 
-    /* ---- Consortium diagram ---- */
+    /* ---- Section rhythm ---- */
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-header { margin-bottom: 2.5rem; }
+    .section-header h2 {
+      font-size: clamp(1.5rem, 2.5vw, 1.75rem);
+      font-weight: 800;
+      color: #e8edf2;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      margin-bottom: 0.75rem;
+    }
+    .section-header p {
+      color: var(--c-text-sub);
+      font-size: 0.95rem;
+      max-width: 600px;
+    }
+
+    /* ---- Glass card base ---- */
+    .glass-card {
+      background: rgba(14,36,64,0.7);
+      border: 1px solid var(--c-border);
+      border-radius: 16px;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    /* ---- Flow cards (consortium diagram) ---- */
     .flow-card {
-      background: rgba(14,36,64,0.9);
-      border: 1px solid rgba(74,131,185,0.2);
-      border-radius: 12px;
+      background: rgba(14,36,64,0.85);
+      border: 1px solid var(--c-border);
+      border-top: 3px solid rgba(74,131,185,0.35);
+      border-radius: 14px;
       padding: 1.25rem;
       text-align: center;
-      transition: border-color 0.2s, transform 0.2s;
+      transition: border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
     }
-    .flow-card:hover { border-color: rgba(74,131,185,0.5); transform: translateY(-2px); }
-    .flow-card.qjc { border-color: rgba(232,160,32,0.5); background: rgba(26,58,92,0.6); }
+    .flow-card:hover {
+      border-color: rgba(74,131,185,0.5);
+      border-top-color: rgba(74,131,185,0.7);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .flow-card.qjc {
+      border-color: rgba(232,160,32,0.4);
+      border-top-color: rgba(232,160,32,0.7);
+      background: rgba(26,58,92,0.6);
+    }
+    .flow-card.qjc:hover { border-color: rgba(232,160,32,0.65); }
+
+    /* ---- Consortium icon wrappers ---- */
+    .flow-icon {
+      width: 2.75rem; height: 2.75rem;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 0.6rem;
+    }
 
     /* ---- Demo section ---- */
     .demo-screenshot {
-      border-radius: 10px;
+      border-radius: 12px;
       overflow: hidden;
-      border: 1px solid rgba(74,131,185,0.25);
+      border: 1px solid var(--c-border);
       cursor: pointer;
-      transition: border-color 0.2s, transform 0.2s;
+      transition: border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
       position: relative;
     }
     .demo-screenshot:hover {
       border-color: rgba(232,160,32,0.5);
-      transform: translateY(-3px);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.3);
     }
-    .demo-screenshot img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
+    .demo-screenshot img { width: 100%; height: auto; display: block; }
     .demo-screenshot .caption {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
+      position: absolute; bottom: 0; left: 0; right: 0;
       background: linear-gradient(transparent, rgba(8,24,48,0.92));
       padding: 1.5rem 1rem 0.75rem;
-      font-size: 0.8rem;
-      color: #a9c2dd;
+      font-size: 0.8rem; color: #a9c2dd;
     }
     .demo-iframe-wrap {
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid rgba(74,131,185,0.25);
+      border-radius: 14px; overflow: hidden;
+      border: 1px solid var(--c-border);
       background: #081830;
-      position: relative;
     }
 
     /* ---- Pricing cards ---- */
     .pricing-card {
-      background: rgba(14,36,64,0.8);
-      border: 1px solid rgba(74,131,185,0.2);
-      border-radius: 16px;
+      background: rgba(13,32,64,0.85);
+      border: 1px solid var(--c-border);
+      border-top: 3px solid rgba(74,131,185,0.3);
+      border-radius: 18px;
       padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      transition: border-color 0.2s, transform 0.2s;
+      display: flex; flex-direction: column;
+      transition: border-color var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-out);
       position: relative;
     }
-    .pricing-card:hover { transform: translateY(-4px); border-color: rgba(74,131,185,0.45); }
+    .pricing-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--c-border-hi);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    }
     .pricing-card.recommended {
       border-color: rgba(232,160,32,0.55);
+      border-top: 3px solid rgba(232,160,32,0.9);
       background: rgba(26,58,92,0.7);
-      box-shadow: 0 0 40px rgba(232,160,32,0.1);
+      box-shadow: 0 0 0 1px rgba(232,160,32,0.25), 0 8px 40px rgba(232,160,32,0.1);
     }
-    .pricing-card.recommended:hover { border-color: rgba(232,160,32,0.8); }
+    .pricing-card.recommended:hover {
+      border-color: rgba(232,160,32,0.8);
+      box-shadow: 0 0 0 2px rgba(232,160,32,0.4), 0 16px 48px rgba(232,160,32,0.15);
+    }
     .rec-badge {
-      position: absolute;
-      top: -13px; left: 50%;
+      position: absolute; top: -13px; left: 50%;
       transform: translateX(-50%);
       background: linear-gradient(90deg, #b57d10, #e8a020);
-      color: #081830;
-      font-size: 0.7rem;
-      font-weight: 800;
-      padding: 0.2rem 1rem;
-      border-radius: 9999px;
-      letter-spacing: 0.06em;
-      white-space: nowrap;
+      color: #081830; font-size: 0.7rem; font-weight: 800;
+      padding: 0.2rem 1rem; border-radius: 9999px;
+      letter-spacing: 0.06em; white-space: nowrap;
     }
     .check-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      font-size: 0.85rem;
-      padding: 0.3rem 0;
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      font-size: 0.85rem; padding: 0.3rem 0;
     }
     .check-icon { flex-shrink: 0; margin-top: 2px; }
     .check-yes { color: #27ae60; }
-    .check-no  { color: #4a5568; }
+    .check-no  { color: #5a6b7c; }
+    .check-no + span { color: #5a6b7c; }
 
     /* ---- Details / Accordion ---- */
     details {
-      border: 1px solid rgba(74,131,185,0.2);
-      border-radius: 10px;
-      overflow: hidden;
+      border: 1px solid var(--c-border);
+      border-radius: 12px; overflow: hidden;
     }
     details + details { margin-top: 0.75rem; }
     summary {
-      padding: 1rem 1.25rem;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: #a9c2dd;
-      list-style: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(14,36,64,0.6);
-      user-select: none;
+      padding: 1rem 1.25rem; cursor: pointer;
+      font-weight: 600; font-size: 0.9rem;
+      color: #a9c2dd; list-style: none;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(14,36,64,0.6); user-select: none;
+      transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
     }
     summary::-webkit-details-marker { display: none; }
+    summary:hover { background: rgba(26,58,92,0.8); color: #e8edf2; }
+    summary:focus-visible { outline: 2px solid rgba(232,160,32,0.6); outline-offset: -2px; }
     summary::after {
-      content: '+';
-      font-size: 1.1rem;
-      color: #e8a020;
-      transition: transform 0.2s;
+      content: '+'; font-size: 1.1rem; color: #e8a020;
+      transition: transform var(--dur-base) var(--ease-out);
     }
     details[open] summary::after { content: '−'; }
     details[open] summary { color: #e8edf2; }
     .details-body {
       padding: 1rem 1.25rem 1.25rem;
       background: rgba(8,24,48,0.5);
-      font-size: 0.875rem;
-      color: #a9c2dd;
-      line-height: 1.75;
+      font-size: 0.875rem; color: #a9c2dd; line-height: 1.75;
     }
 
-    /* ---- CTA ---- */
+    /* ---- Buttons ---- */
     .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
+      display: inline-flex; align-items: center; gap: 0.5rem;
       background: linear-gradient(135deg, #1a3a5c, #2d6a9f);
       border: 1px solid rgba(74,131,185,0.5);
-      color: #e8edf2;
-      padding: 0.875rem 2rem;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 0.95rem;
+      color: #e8edf2; padding: 0.875rem 2rem;
+      border-radius: 10px; font-weight: 700; font-size: 0.95rem;
       text-decoration: none;
-      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      transition: background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  transform var(--dur-fast) var(--ease-out),
+                  box-shadow var(--dur-base) var(--ease-out);
       cursor: pointer;
     }
-    .btn-primary:hover { background: linear-gradient(135deg, #2d6a9f, #4e83b9); border-color: #4e83b9; transform: translateY(-2px); }
-
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2d6a9f, #4e83b9);
+      border-color: #4e83b9;
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 6px 20px rgba(45,106,159,0.3);
+    }
     .btn-gold {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
+      display: inline-flex; align-items: center; gap: 0.5rem;
       background: linear-gradient(135deg, #b57d10, #e8a020);
-      color: #081830;
-      padding: 0.875rem 2rem;
-      border-radius: 10px;
-      font-weight: 800;
-      font-size: 0.95rem;
+      color: #081830; padding: 0.875rem 2rem;
+      border-radius: 10px; font-weight: 800; font-size: 0.95rem;
       text-decoration: none;
-      transition: opacity 0.2s, transform 0.15s;
+      transition: opacity var(--dur-base) var(--ease-out),
+                  transform var(--dur-fast) var(--ease-out),
+                  box-shadow var(--dur-base) var(--ease-out);
       cursor: pointer;
     }
-    .btn-gold:hover { opacity: 0.9; transform: translateY(-2px); }
+    .btn-gold:hover {
+      opacity: 0.92;
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 6px 20px rgba(232,160,32,0.35);
+    }
 
     /* ---- Steps ---- */
     .step-num {
-      width: 2.5rem; height: 2.5rem;
-      border-radius: 50%;
-      background: rgba(26,58,92,0.8);
-      border: 2px solid rgba(74,131,185,0.4);
+      width: 2.5rem; height: 2.5rem; border-radius: 50%;
+      background: rgba(26,58,92,0.8); border: 2px solid rgba(74,131,185,0.4);
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800;
-      font-size: 0.9rem;
-      color: #f5c665;
-      flex-shrink: 0;
+      font-weight: 800; font-size: 0.9rem; color: #f5c665; flex-shrink: 0;
     }
 
     /* ---- Lightbox ---- */
     #lightbox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(4,12,28,0.95);
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      cursor: zoom-out;
+      display: none; position: fixed; inset: 0;
+      background: rgba(4,12,28,0.96); z-index: 9999;
+      align-items: center; justify-content: center;
+      padding: 2rem; cursor: zoom-out;
     }
     #lightbox.open { display: flex; }
     #lightbox img {
-      max-width: 100%;
-      max-height: 90vh;
-      border-radius: 10px;
-      border: 1px solid rgba(74,131,185,0.3);
+      max-width: 100%; max-height: 90vh;
+      border-radius: 12px; border: 1px solid rgba(74,131,185,0.3);
       object-fit: contain;
     }
 
     /* ---- Divider ---- */
     .section-divider {
       height: 1px;
-      background: linear-gradient(to right, transparent, rgba(74,131,185,0.25), transparent);
+      background: linear-gradient(to right, transparent, rgba(74,131,185,0.22), transparent);
       margin: 0;
     }
 
     /* ---- Table ---- */
     .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .data-table th {
-      background: rgba(14,36,64,0.9);
-      color: #7aa2cb;
-      font-weight: 600;
-      padding: 0.6rem 0.9rem;
-      text-align: left;
-      border-bottom: 1px solid rgba(74,131,185,0.2);
+      background: rgba(14,36,64,0.9); color: #7aa2cb;
+      font-weight: 600; padding: 0.6rem 0.9rem;
+      text-align: left; border-bottom: 1px solid rgba(74,131,185,0.2);
     }
     .data-table td {
-      padding: 0.55rem 0.9rem;
-      border-bottom: 1px solid rgba(74,131,185,0.1);
+      padding: 0.55rem 0.9rem; border-bottom: 1px solid rgba(74,131,185,0.1);
       color: #c4d4e2;
     }
     .data-table tr:last-child td { border-bottom: none; }
+
+    /* ---- Scroll reveal animation ---- */
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        opacity: 0;
+        transform: translateY(22px);
+        transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+      }
+      .reveal.visible { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---- Hero keyframe ---- */
+    @media (prefers-reduced-motion: no-preference) {
+      @keyframes heroSlideUp {
+        from { opacity: 0; transform: translateY(28px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .hero-line-1 { animation: heroSlideUp 0.7s var(--ease-out) 0.1s both; }
+      .hero-line-2 { animation: heroSlideUp 0.7s var(--ease-out) 0.25s both; }
+      .hero-desc   { animation: heroSlideUp 0.7s var(--ease-out) 0.4s both; }
+      .hero-cta    { animation: heroSlideUp 0.7s var(--ease-out) 0.55s both; }
+      .hero-badges { animation: heroSlideUp 0.6s var(--ease-out) 0.05s both; }
+    }
+
+    /* ---- Mesh gradient noise overlay ---- */
+    .mesh-bg::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 15% 60%, rgba(45,106,159,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 25%, rgba(74,131,185,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 55% 95%, rgba(232,160,32,0.04) 0%, transparent 45%);
+      pointer-events: none;
+    }
 
     /* ---- Responsive ---- */
     @media (max-width: 768px) {
       .pricing-grid { grid-template-columns: 1fr !important; }
       .screenshot-grid { grid-template-columns: 1fr !important; }
-      .consortium-grid { grid-template-columns: 1fr !important; }
-      .hero-title { font-size: 1.6rem !important; }
+      .consortium-top-grid { grid-template-columns: 1fr 1fr !important; }
+      .consortium-bottom-grid { grid-template-columns: 1fr !important; }
+      .hero-title { font-size: clamp(1.85rem, 6vw, 2.5rem) !important; }
+      .footer-info { flex-direction: column !important; gap: 0.25rem !important; }
     }
     @media (max-width: 1024px) {
       .pricing-grid { grid-template-columns: 1fr 1fr !important; }
@@ -327,17 +406,19 @@
 <!-- ======================================================
      NAV
 ====================================================== -->
-<nav style="position: sticky; top: 0; z-index: 100; background: rgba(8,24,48,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(74,131,185,0.15);">
+<nav style="position: sticky; top: 0; z-index: 100; background: rgba(8,24,48,0.88); backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); border-bottom: 1px solid rgba(74,131,185,0.15);">
   <div style="max-width: 1100px; margin: 0 auto; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
     <div style="display: flex; align-items: center; gap: 0.75rem;">
-      <span style="font-size: 1.1rem; font-weight: 800; color: #e8edf2; letter-spacing: -0.01em;">QJC <span style="color: #e8a020;">×</span> 레오케어</span>
-      <span class="badge badge-navy" style="font-size: 0.65rem;">비공개 제안</span>
+      <div style="border-left: 3px solid rgba(232,160,32,0.7); padding-left: 0.6rem;">
+        <span style="font-size: 1.15rem; font-weight: 800; color: #e8edf2; letter-spacing: -0.02em;">QJC <span style="color: #e8a020;">×</span> 레오케어</span>
+      </div>
     </div>
-    <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
       <a href="#demo" class="nav-link">데모</a>
       <a href="#pricing" class="nav-link">견적</a>
       <a href="#details" class="nav-link">상세 조건</a>
       <a href="#cta" class="nav-link" style="color: #f5c665;">다음 단계 →</a>
+      <span class="badge badge-navy" style="font-size: 0.62rem; margin-left: 0.25rem;">비공개 제안</span>
     </div>
   </div>
 </nav>
@@ -345,41 +426,43 @@
 <!-- ======================================================
      HERO
 ====================================================== -->
-<section style="background: linear-gradient(180deg, #0a1e3c 0%, #081830 100%); padding: 5rem 1.5rem 4rem; text-align: center; position: relative; overflow: hidden;">
-  <!-- Subtle grid overlay -->
-  <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(74,131,185,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(74,131,185,0.04) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none;"></div>
+<section style="background: linear-gradient(180deg, #0c2248 0%, #081830 100%); padding: clamp(4rem,10vh,6rem) 1.5rem clamp(3rem,8vh,5rem); text-align: center; position: relative; overflow: hidden;" class="mesh-bg">
+  <!-- Subtle dot-grid overlay -->
+  <div style="position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(74,131,185,0.07) 1px, transparent 1px); background-size: 36px 36px; pointer-events: none;"></div>
 
   <div style="max-width: 860px; margin: 0 auto; position: relative;">
-    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-bottom: 1.75rem;">
+    <!-- Badges row -->
+    <div class="hero-badges" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.45rem; margin-bottom: 1.75rem;">
       <span class="badge badge-navy">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         RFP 2026-AX-Sprint-14
       </span>
       <span class="badge badge-gold">20억 원 사업</span>
       <span class="badge badge-navy">해군사관학교</span>
       <span class="badge badge-urgent" id="countdown-badge">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         6/1 제안서 마감
       </span>
     </div>
 
-    <h1 class="hero-title" style="font-size: 2.4rem; font-weight: 900; line-height: 1.25; letter-spacing: -0.02em; color: #e8edf2; margin-bottom: 1.25rem;">
-      해군사관학교 AI 체력관리 시스템<br/>
-      <span style="color: #e8a020;">QJC 프론트엔드 제안</span>
+    <!-- H1 — kinetic entrance -->
+    <h1 class="hero-title" style="font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 900; line-height: 1.12; letter-spacing: -0.03em; color: #e8edf2; margin-bottom: 1.25rem;">
+      <span class="hero-line-1" style="display: block;">해군사관학교 AI 체력관리 시스템</span>
+      <span class="hero-line-2" style="display: block; color: #e8a020;">QJC 프론트엔드 제안</span>
     </h1>
 
-    <p style="font-size: 1.1rem; color: #7aa2cb; max-width: 640px; margin: 0 auto 2rem; line-height: 1.75;">
-      데이터는 ETRI·오파스넷이, <strong style="color: #a9c2dd;">화면은 QJC가</strong> 맡습니다.<br/>
+    <p class="hero-desc" style="font-size: clamp(1rem, 1.5vw, 1.15rem); color: #8fb4d0; max-width: 640px; margin: 0 auto 2rem; line-height: 1.78;">
+      데이터는 ETRI·오파스넷이, <strong style="color: #c4d4e2;">화면은 QJC가</strong> 맡습니다.<br/>
       디지털 트윈 시뮬레이션 + 훈육관 대시보드 — 지금 바로 작동하는 프로토타입으로 확인하세요.
     </p>
 
-    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem;">
+    <div class="hero-cta" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem;">
       <a href="#demo" class="btn-gold">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
         인터랙티브 데모 보기
       </a>
       <a href="#pricing" class="btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
         견적 3-Tier 확인
       </a>
     </div>
@@ -391,81 +474,90 @@
 <!-- ======================================================
      컨소시엄 역할 다이어그램
 ====================================================== -->
-<section id="overview" style="padding: 4.5rem 1.5rem;">
-  <div style="max-width: 1100px; margin: 0 auto;">
-    <div style="margin-bottom: 2.5rem;">
+<section id="overview" style="padding: clamp(4rem,8vh,5.5rem) 1.5rem; background: var(--c-surface2);">
+  <div class="section-inner reveal">
+    <div class="section-header">
       <p class="section-label">사업 개요</p>
-      <h2 style="font-size: 1.65rem; font-weight: 800; color: #e8edf2; margin-top: 0.4rem; letter-spacing: -0.01em;">컨소시엄 4사 역할 분담</h2>
-      <p style="color: #7aa2cb; font-size: 0.95rem; margin-top: 0.5rem; max-width: 580px;">
+      <h2>컨소시엄 4사 역할 분담</h2>
+      <p>
         오파스넷이 인프라·데이터셋을, ETRI가 AI 모델을, 레오케어가 PM을, <strong style="color: #e8a020;">QJC가 최종 사용자 화면 전체</strong>를 담당합니다.
       </p>
     </div>
 
-    <!-- Flow diagram -->
-    <div class="consortium-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; align-items: center; margin-bottom: 3rem;">
+    <!-- Top row: 오파스넷 → ETRI -->
+    <div class="consortium-top-grid" style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1rem;">
       <div class="flow-card">
-        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🏗️</div>
-        <div style="font-size: 0.7rem; color: #7aa2cb; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">인프라·데이터셋</div>
+        <div class="flow-icon" style="background: rgba(26,58,92,0.8); border: 1px solid rgba(74,131,185,0.3);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7aa2cb" stroke-width="1.8" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/></svg>
+        </div>
+        <div style="font-size: 0.65rem; color: #7aa2cb; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">인프라·데이터셋</div>
         <div style="font-weight: 800; color: #a9c2dd; font-size: 1rem;">오파스넷</div>
-        <div style="font-size: 0.75rem; color: #4e83b9; margin-top: 0.5rem;">서버 구축 · 데이터 수집 · API 제공</div>
+        <div style="font-size: 0.72rem; color: #4e83b9; margin-top: 0.4rem;">서버 구축 · 데이터 수집 · API 제공</div>
       </div>
 
-      <!-- Arrow -->
-      <div style="text-align: center; color: #2d6a9f; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
-        <svg width="28" height="12" viewBox="0 0 28 12" fill="none"><path d="M0 6h24M18 1l6 5-6 5" stroke="#2d6a9f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div style="display: flex; align-items: center; justify-content: center; padding: 0 0.5rem;">
+        <svg width="36" height="14" viewBox="0 0 36 14" fill="none" aria-hidden="true"><path d="M0 7h30M24 2l7 5-7 5" stroke="#2d6a9f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
 
-      <div class="flow-card" style="margin-left: -0.75rem;">
-        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🤖</div>
-        <div style="font-size: 0.7rem; color: #7aa2cb; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">AI 모델</div>
+      <div class="flow-card">
+        <div class="flow-icon" style="background: rgba(26,58,92,0.8); border: 1px solid rgba(74,131,185,0.3);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7aa2cb" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>
+        </div>
+        <div style="font-size: 0.65rem; color: #7aa2cb; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">AI 모델</div>
         <div style="font-weight: 800; color: #a9c2dd; font-size: 1rem;">ETRI</div>
-        <div style="font-size: 0.75rem; color: #4e83b9; margin-top: 0.5rem;">부상 예측 · 성과 분석 · 모델 API</div>
+        <div style="font-size: 0.72rem; color: #4e83b9; margin-top: 0.4rem;">부상 예측 · 성과 분석 · 모델 API</div>
       </div>
-
-      <!-- Arrow 2 -->
-      <div style="display: none;"></div>
     </div>
 
-    <!-- Second row: PM + QJC -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 0.75rem; align-items: center;">
+    <!-- Vertical connector -->
+    <div style="display: flex; justify-content: center; margin: 0.25rem 0;">
+      <svg width="14" height="28" viewBox="0 0 14 28" fill="none" aria-hidden="true"><path d="M7 0v22M2 17l5 7 5-7" stroke="#2d6a9f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+
+    <!-- Bottom row: 레오케어 → QJC -->
+    <div class="consortium-bottom-grid" style="display: grid; grid-template-columns: 1fr auto 2fr; gap: 1rem; align-items: center; margin-bottom: 2rem;">
       <div class="flow-card">
-        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📋</div>
-        <div style="font-size: 0.7rem; color: #7aa2cb; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">PM · 기획</div>
+        <div class="flow-icon" style="background: rgba(26,58,92,0.8); border: 1px solid rgba(74,131,185,0.3);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7aa2cb" stroke-width="1.8" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        </div>
+        <div style="font-size: 0.65rem; color: #7aa2cb; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; margin-bottom: 0.3rem;">PM · 기획</div>
         <div style="font-weight: 800; color: #a9c2dd; font-size: 1rem;">레오케어</div>
-        <div style="font-size: 0.75rem; color: #4e83b9; margin-top: 0.5rem;">사업 총괄 · 컨소시엄 조율</div>
+        <div style="font-size: 0.72rem; color: #4e83b9; margin-top: 0.4rem;">사업 총괄 · 컨소시엄 조율</div>
       </div>
 
-      <div style="text-align: center; color: #2d6a9f;">
-        <svg width="28" height="12" viewBox="0 0 28 12" fill="none"><path d="M0 6h24M18 1l6 5-6 5" stroke="#2d6a9f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div style="display: flex; align-items: center; justify-content: center; padding: 0 0.5rem;">
+        <svg width="36" height="14" viewBox="0 0 36 14" fill="none" aria-hidden="true"><path d="M0 7h30M24 2l7 5-7 5" stroke="#e8a020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
 
       <div class="flow-card qjc">
         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-          <div style="font-size: 1.5rem;">🖥️</div>
+          <div class="flow-icon" style="background: rgba(184,125,16,0.18); border: 1px solid rgba(232,160,32,0.35); margin: 0; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="1.8" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
           <div>
-            <div style="font-size: 0.7rem; color: #e8a020; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;">프론트엔드 전담</div>
+            <div style="font-size: 0.65rem; color: #e8a020; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;">프론트엔드 전담</div>
             <div style="font-weight: 900; color: #f5c665; font-size: 1.1rem;">QJC (퀀텀점프클럽)</div>
           </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-          <div style="background: rgba(8,24,48,0.6); border-radius: 8px; padding: 0.75rem; border: 1px solid rgba(74,131,185,0.2);">
-            <div style="font-size: 0.7rem; color: #e8a020; font-weight: 700; margin-bottom: 0.25rem;">모듈 A</div>
-            <div style="font-size: 0.8rem; color: #a9c2dd; font-weight: 600;">디지털 트윈 시뮬레이션</div>
-            <div style="font-size: 0.72rem; color: #4e83b9; margin-top: 0.2rem;">개인 체력 분석 · 부상 예측 시각화</div>
+          <div style="background: rgba(8,24,48,0.55); border-radius: 10px; padding: 0.75rem; border: 1px solid rgba(74,131,185,0.2);">
+            <div style="font-size: 0.65rem; color: #e8a020; font-weight: 700; margin-bottom: 0.25rem;">모듈 A</div>
+            <div style="font-size: 0.82rem; color: #a9c2dd; font-weight: 700;">디지털 트윈 시뮬레이션</div>
+            <div style="font-size: 0.7rem; color: #4e83b9; margin-top: 0.2rem;">개인 체력 분석 · 부상 예측 시각화</div>
           </div>
-          <div style="background: rgba(8,24,48,0.6); border-radius: 8px; padding: 0.75rem; border: 1px solid rgba(74,131,185,0.2);">
-            <div style="font-size: 0.7rem; color: #e8a020; font-weight: 700; margin-bottom: 0.25rem;">모듈 B</div>
-            <div style="font-size: 0.8rem; color: #a9c2dd; font-weight: 600;">훈육관 대시보드</div>
-            <div style="font-size: 0.72rem; color: #4e83b9; margin-top: 0.2rem;">생도 모니터링 · KPI · 알림 관리</div>
+          <div style="background: rgba(8,24,48,0.55); border-radius: 10px; padding: 0.75rem; border: 1px solid rgba(74,131,185,0.2);">
+            <div style="font-size: 0.65rem; color: #e8a020; font-weight: 700; margin-bottom: 0.25rem;">모듈 B</div>
+            <div style="font-size: 0.82rem; color: #a9c2dd; font-weight: 700;">훈육관 대시보드</div>
+            <div style="font-size: 0.7rem; color: #4e83b9; margin-top: 0.2rem;">생도 모니터링 · KPI · 알림 관리</div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Highlight box -->
-    <div style="margin-top: 2rem; background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.2); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1rem;">
-      <svg style="flex-shrink:0; margin-top:2px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <div style="font-size: 0.875rem; color: #a9c2dd;">
+    <div style="background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.2); border-left: 3px solid rgba(232,160,32,0.6); border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1rem;">
+      <svg style="flex-shrink:0; margin-top:2px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div style="font-size: 0.875rem; color: #a9c2dd; line-height: 1.7;">
         <strong style="color: #e8edf2;">QJC 차별점 3가지:</strong>
         <span style="color: #7aa2cb;"> ① 군 O등급 비식별화 UX 전문성 &nbsp;|&nbsp; ② AI 모델 출력 시각화 설계 역량 &nbsp;|&nbsp; ③ AI 활용 고속 개발로 동급 품질 40~60% 빠른 납기</span>
       </div>
@@ -478,25 +570,25 @@
 <!-- ======================================================
      데모 섹션
 ====================================================== -->
-<section id="demo" style="padding: 4.5rem 1.5rem;">
-  <div style="max-width: 1100px; margin: 0 auto;">
-    <div style="margin-bottom: 2.5rem;">
+<section id="demo" style="padding: clamp(4rem,8vh,5.5rem) 1.5rem;">
+  <div class="section-inner reveal">
+    <div class="section-header">
       <p class="section-label">프로토타입 데모</p>
-      <h2 style="font-size: 1.65rem; font-weight: 800; color: #e8edf2; margin-top: 0.4rem; letter-spacing: -0.01em;">RFP 명시 기능, 지금 바로 작동합니다</h2>
-      <p style="color: #7aa2cb; font-size: 0.95rem; margin-top: 0.5rem; max-width: 640px;">
+      <h2>RFP 명시 기능, 지금 바로 작동합니다</h2>
+      <p>
         RFP §3.2 "디지털 트윈 기반 개인 체력 시뮬레이션" + §3.4 "훈육관 모니터링 대시보드" 요건을 인터랙티브 프로토타입으로 구현했습니다. 이미지를 클릭하면 크게 볼 수 있어요.
       </p>
     </div>
 
     <!-- Screenshot preview grid -->
     <div class="screenshot-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.75rem;">
-      <div class="demo-screenshot" onclick="openLightbox(this.querySelector('img').src)">
+      <div class="demo-screenshot" onclick="openLightbox(this.querySelector('img').src)" role="button" tabindex="0" aria-label="모듈 A 시뮬레이션 스크린샷 확대" onkeydown="if(event.key==='Enter')openLightbox(this.querySelector('img').src)">
         <img src="./screenshots/01_simulation.png" alt="모듈 A — 디지털 트윈 개인 체력 시뮬레이션 화면. 생도 아바타, 시계열 체력 추이, AI 부상 위험도 시각화." loading="lazy" />
         <div class="caption">
           <strong style="color: #f5c665;">모듈 A</strong> — 개인 체력 시뮬레이션 · AI 부상 위험도 · 운동처방 표시
         </div>
       </div>
-      <div class="demo-screenshot" onclick="openLightbox(this.querySelector('img').src)">
+      <div class="demo-screenshot" onclick="openLightbox(this.querySelector('img').src)" role="button" tabindex="0" aria-label="모듈 B 대시보드 스크린샷 확대" onkeydown="if(event.key==='Enter')openLightbox(this.querySelector('img').src)">
         <img src="./screenshots/02_dashboard.png" alt="모듈 B — 훈육관·교관용 모니터링 대시보드 화면. 생도 리스트, 부상위험 알림, KPI 통계." loading="lazy" />
         <div class="caption">
           <strong style="color: #f5c665;">모듈 B</strong> — 훈육관 대시보드 · 부상위험 알림 · 기수별 KPI
@@ -504,23 +596,20 @@
       </div>
     </div>
 
-    <!-- CTA buttons -->
-    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 2rem;">
+    <!-- CTA button — 전체화면 열기 단독 (P1-4: 중복 제거) -->
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 2rem; align-items: center;">
       <a href="./demo.html" target="_blank" rel="noopener" class="btn-gold">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        인터랙티브 데모 전체화면으로 열기
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        전체화면 데모 열기
       </a>
-      <a href="./demo.html" target="_blank" rel="noopener" class="btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        새 탭에서 열기
-      </a>
+      <span style="color: #2d6a9f; font-size: 0.85rem;">인터랙티브 프로토타입 · 새 탭에서 실행</span>
     </div>
 
     <!-- Embedded iframe -->
     <div class="demo-iframe-wrap">
       <div style="background: rgba(14,36,64,0.8); padding: 0.6rem 1rem; border-bottom: 1px solid rgba(74,131,185,0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <div style="display: flex; gap: 5px;">
+          <div style="display: flex; gap: 5px;" aria-hidden="true">
             <div style="width:10px;height:10px;border-radius:50%;background:#e74c3c;"></div>
             <div style="width:10px;height:10px;border-radius:50%;background:#f39c12;"></div>
             <div style="width:10px;height:10px;border-radius:50%;background:#27ae60;"></div>
@@ -538,8 +627,8 @@
       ></iframe>
     </div>
 
-    <p style="font-size: 0.78rem; color: #4e83b9; margin-top: 0.75rem; text-align: center;">
-      iframe이 잘 보이지 않으면 위 "전체화면으로 열기" 버튼을 이용하세요.
+    <p style="font-size: 0.78rem; color: #7aa2cb; margin-top: 0.75rem; text-align: center;">
+      iframe이 잘 보이지 않으면 위 "전체화면 데모 열기" 버튼을 이용하세요.
     </p>
   </div>
 </section>
@@ -549,72 +638,114 @@
 <!-- ======================================================
      견적 3-TIER
 ====================================================== -->
-<section id="pricing" style="padding: 4.5rem 1.5rem;">
-  <div style="max-width: 1100px; margin: 0 auto;">
-    <div style="margin-bottom: 0.75rem;">
+<section id="pricing" style="padding: clamp(4rem,8vh,5.5rem) 1.5rem; background: var(--c-surface2);">
+  <div class="section-inner reveal">
+    <div class="section-header">
       <p class="section-label">견적 제안</p>
-      <h2 style="font-size: 1.65rem; font-weight: 800; color: #e8edf2; margin-top: 0.4rem; letter-spacing: -0.01em;">3-Tier 가격 구조</h2>
-      <p style="color: #7aa2cb; font-size: 0.875rem; margin-top: 0.4rem;">모든 금액 VAT 별도 · 견적번호 QJC-2026-0529-LEO-001</p>
+      <h2>3-Tier 가격 구조</h2>
+      <p style="color: var(--c-text-sub); font-size: 0.875rem;">모든 금액 VAT 별도 · 견적번호 QJC-2026-0529-LEO-001</p>
     </div>
 
     <!-- Market anchor -->
-    <div style="background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.15); border-radius: 8px; padding: 0.75rem 1.25rem; margin-bottom: 1.75rem; font-size: 0.825rem; color: #7aa2cb; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4e83b9" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div style="background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.15); border-left: 3px solid rgba(74,131,185,0.4); border-radius: 10px; padding: 0.8rem 1.25rem; margin-bottom: 2rem; font-size: 0.825rem; color: #7aa2cb; display: flex; align-items: flex-start; gap: 0.6rem; flex-wrap: wrap;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4e83b9" stroke-width="2" style="flex-shrink:0;margin-top:1px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span><strong style="color: #a9c2dd;">전통 SI 시장 단가 기준:</strong> 동일 사양 프론트엔드 개발 표준형 범위(8개월) 약 5,300만~8,000만원 / 확장형(12개월) 약 8,000만~1.2억원 (SW기술자 노임단가 시니어 2인 기준)</span>
-      <span style="color: #e8a020; font-weight: 700; margin-left: 0.25rem;">→ QJC는 AI 고속 개발로 시장 단가 40~50% 수준에 제공합니다.</span>
+      <span style="color: #e8a020; font-weight: 700;">→ QJC는 AI 고속 개발로 시장 단가 40~50% 수준에 제공합니다.</span>
     </div>
 
     <!-- Pricing cards -->
     <div class="pricing-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-items: start;">
 
-      <!-- Lite -->
+      <!-- Tier 1 Lite -->
       <div class="pricing-card">
         <div style="margin-bottom: 1.25rem;">
-          <div style="font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: #4e83b9; margin-bottom: 0.4rem;">Tier 1</div>
+          <div style="font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: var(--c-text-muted); margin-bottom: 0.4rem;">Tier 1</div>
           <div style="font-size: 1.25rem; font-weight: 800; color: #e8edf2;">기본형 (Lite)</div>
           <div style="font-size: 0.8rem; color: #7aa2cb; margin-top: 0.3rem;">핵심 모니터링 · 1차 실증</div>
         </div>
         <div style="margin-bottom: 1.5rem;">
-          <span style="font-size: 2.5rem; font-weight: 900; color: #e8edf2;">2,800<span style="font-size: 1.2rem;">만원</span></span>
-          <div style="font-size: 0.75rem; color: #4e83b9; margin-top: 0.2rem;">VAT 별도 · 납기 5개월</div>
+          <span style="font-size: 2.6rem; font-weight: 900; color: #e8edf2; line-height: 1;">2,800<span style="font-size: 1.15rem;">만원</span></span>
+          <div style="font-size: 0.75rem; color: var(--c-text-muted); margin-top: 0.3rem;">VAT 별도 · 납기 5개월</div>
         </div>
 
         <div style="flex: 1; margin-bottom: 1.5rem;">
-          <div class="check-row"><svg class="check-icon check-no" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span style="color: #4a5568;">모듈 A 시뮬레이션 — 미포함</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>모듈 B 대시보드 <strong style="color: #7aa2cb;">(기본 버전)</strong></span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>생도 리스트 · 측정값 테이블 · 부상위험 알림</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>온프레미스 배포 (기본)</span></div>
-          <div class="check-row"><svg class="check-icon check-no" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span style="color: #4a5568;">인터페이스 연동 협의 — 미포함</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>하자보수 3개월</span></div>
+          <div class="check-row">
+            <svg class="check-icon check-no" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span>모듈 A 시뮬레이션 — 미포함</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>모듈 B 대시보드 <strong style="color: #7aa2cb;">(기본 버전)</strong></span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>생도 리스트 · 측정값 테이블 · 부상위험 알림</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>온프레미스 배포 (기본)</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-no" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span>인터페이스 연동 협의 — 미포함</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>하자보수 3개월</span>
+          </div>
         </div>
 
-        <div style="border-top: 1px solid rgba(74,131,185,0.15); padding-top: 1rem; font-size: 0.8rem; color: #4e83b9;">
+        <div style="border-top: 1px solid rgba(74,131,185,0.15); padding-top: 1rem; font-size: 0.8rem; color: var(--c-text-muted);">
           착수 40% → 중도금 30% → 잔금 30%
         </div>
       </div>
 
-      <!-- Standard (recommended) -->
+      <!-- Tier 2 Standard (recommended) -->
       <div class="pricing-card recommended">
         <div class="rec-badge">⭐ QJC 추천 · RFP 완전 이행</div>
         <div style="margin-bottom: 1.25rem;">
-          <div style="font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: #e8a020; margin-bottom: 0.4rem;">Tier 2</div>
+          <div style="font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: #e8a020; margin-bottom: 0.4rem;">Tier 2</div>
           <div style="font-size: 1.25rem; font-weight: 800; color: #e8edf2;">표준형 (Standard)</div>
           <div style="font-size: 0.8rem; color: #7aa2cb; margin-top: 0.3rem;">모듈 A+B 완전 구현 · 제안서 요건 충족</div>
         </div>
         <div style="margin-bottom: 1.5rem;">
-          <span style="font-size: 2.5rem; font-weight: 900; color: #f5c665;">4,200<span style="font-size: 1.2rem; color: #e8edf2;">만원</span></span>
-          <div style="font-size: 0.75rem; color: #e8a020; margin-top: 0.2rem;">VAT 별도 · 납기 8개월 · 총사업비 2.1%</div>
+          <span style="font-size: 3rem; font-weight: 900; color: #f5c665; line-height: 1;">4,200<span style="font-size: 1.15rem; color: #e8edf2;">만원</span></span>
+          <div style="font-size: 0.75rem; color: #e8a020; margin-top: 0.3rem;">VAT 별도 · 납기 8개월 · 총사업비 2.1%</div>
         </div>
 
         <div style="flex: 1; margin-bottom: 1.5rem;">
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span><strong style="color: #f5c665;">모듈 A 전체</strong> — 디지털 트윈 시뮬레이션</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>개인 아바타(2D) · AI 부상위험도 · 운동처방</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span><strong style="color: #f5c665;">모듈 B 전체</strong> — 훈육관 대시보드</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>이탈 예측 지표 · 권한 구분 · KPI 통계</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>윈도우 앱 패키징 + 온프레미스 배포</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>군 보안 O등급 대응 포함</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>인터페이스 연동 협의 지원</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>사용자 매뉴얼 · 하자보수 6개월</span></div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span><strong style="color: #f5c665;">모듈 A 전체</strong> — 디지털 트윈 시뮬레이션</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>개인 아바타(2D) · AI 부상위험도 · 운동처방</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span><strong style="color: #f5c665;">모듈 B 전체</strong> — 훈육관 대시보드</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>이탈 예측 지표 · 권한 구분 · KPI 통계</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>윈도우 앱 패키징 + 온프레미스 배포</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>군 보안 O등급 대응 포함</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>인터페이스 연동 협의 지원</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>사용자 매뉴얼 · 하자보수 6개월</span>
+          </div>
         </div>
 
         <div style="border-top: 1px solid rgba(232,160,32,0.25); padding-top: 1rem; font-size: 0.8rem; color: #e8a020;">
@@ -622,37 +753,61 @@
         </div>
       </div>
 
-      <!-- Premium -->
+      <!-- Tier 3 Premium -->
       <div class="pricing-card">
         <div style="margin-bottom: 1.25rem;">
-          <div style="font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: #4e83b9; margin-bottom: 0.4rem;">Tier 3</div>
+          <div style="font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: var(--c-text-muted); margin-bottom: 0.4rem;">Tier 3</div>
           <div style="font-size: 1.25rem; font-weight: 800; color: #e8edf2;">확장형 (Premium)</div>
           <div style="font-size: 0.8rem; color: #7aa2cb; margin-top: 0.3rem;">표준형 + 고급 분석 · 12개월 동행</div>
         </div>
         <div style="margin-bottom: 1.5rem;">
-          <span style="font-size: 2.5rem; font-weight: 900; color: #e8edf2;">7,800<span style="font-size: 1.2rem;">만원</span></span>
-          <div style="font-size: 0.75rem; color: #4e83b9; margin-top: 0.2rem;">VAT 별도 · 납기 12개월 · 운영 유지보수 별도</div>
+          <span style="font-size: 2.6rem; font-weight: 900; color: #e8edf2; line-height: 1;">7,800<span style="font-size: 1.15rem;">만원</span></span>
+          <div style="font-size: 0.75rem; color: var(--c-text-muted); margin-top: 0.3rem;">VAT 별도 · 납기 12개월 · 운영 유지보수 별도</div>
         </div>
 
         <div style="flex: 1; margin-bottom: 1.5rem;">
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span><strong style="color: #a9c2dd;">표준형 전체</strong> 포함</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>군 작전 환경 시뮬레이션 시각화</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>연도별·기수별 비교 분석 화면</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>PDF·엑셀 자동 리포트 생성</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>해사 CI 적용 · UI/UX 커스터마이징</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>현장 출강 교육 2회</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>스펙 변경 CR 1회 포함</span></div>
-          <div class="check-row"><svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>하자보수 12개월 + 유상 운영 유지보수</span></div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span><strong style="color: #a9c2dd;">표준형 전체</strong> 포함</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>군 작전 환경 시뮬레이션 시각화</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>연도별·기수별 비교 분석 화면</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>PDF·엑셀 자동 리포트 생성</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>해사 CI 적용 · UI/UX 커스터마이징</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>현장 출강 교육 2회</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>스펙 변경 CR 1회 포함</span>
+          </div>
+          <div class="check-row">
+            <svg class="check-icon check-yes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>하자보수 12개월 + 유상 운영 유지보수</span>
+          </div>
         </div>
 
-        <div style="border-top: 1px solid rgba(74,131,185,0.15); padding-top: 1rem; font-size: 0.8rem; color: #4e83b9;">
+        <div style="border-top: 1px solid rgba(74,131,185,0.15); padding-top: 1rem; font-size: 0.8rem; color: var(--c-text-muted);">
           착수 40% → 중도금 30% (M2·M3 각 15%) → 잔금 30%
         </div>
       </div>
     </div>
 
-    <!-- Tier comparison table (full) -->
-    <div style="margin-top: 2rem; overflow-x: auto;">
+    <!-- Tier comparison table -->
+    <div style="margin-top: 2.5rem; overflow-x: auto;">
       <table class="data-table">
         <thead>
           <tr>
@@ -664,12 +819,12 @@
         </thead>
         <tbody>
           <tr><td>금액 (VAT별도)</td><td>2,800만원</td><td style="color: #f5c665; font-weight: 700;">4,200만원</td><td>7,800만원</td></tr>
-          <tr><td>모듈 A 시뮬레이션</td><td style="color: #e74c3c;">미포함</td><td style="color: #27ae60;">전체</td><td style="color: #27ae60;">전체</td></tr>
+          <tr><td>모듈 A 시뮬레이션</td><td style="color: #6b7c8d; font-size: 0.82rem;">—</td><td style="color: #27ae60;">전체</td><td style="color: #27ae60;">전체</td></tr>
           <tr><td>모듈 B 대시보드</td><td>기본</td><td style="color: #27ae60;">완전</td><td style="color: #27ae60;">완전 + 확장</td></tr>
           <tr><td>군 보안 O등급 대응</td><td>기본</td><td style="color: #27ae60;">포함</td><td style="color: #27ae60;">포함</td></tr>
-          <tr><td>인터페이스 연동 협의</td><td style="color: #e74c3c;">미포함</td><td style="color: #27ae60;">포함</td><td style="color: #27ae60;">포함 + CR 1회</td></tr>
+          <tr><td>인터페이스 연동 협의</td><td style="color: #6b7c8d; font-size: 0.82rem;">—</td><td style="color: #27ae60;">포함</td><td style="color: #27ae60;">포함 + CR 1회</td></tr>
           <tr><td>하자보수</td><td>3개월</td><td>6개월</td><td style="color: #f5c665;">12개월</td></tr>
-          <tr><td>사용자 교육</td><td style="color: #e74c3c;">없음</td><td>매뉴얼 제공</td><td style="color: #27ae60;">현장 출강 2회</td></tr>
+          <tr><td>사용자 교육</td><td style="color: #6b7c8d; font-size: 0.82rem;">—</td><td>매뉴얼 제공</td><td style="color: #27ae60;">현장 출강 2회</td></tr>
           <tr><td>납기</td><td>5개월</td><td>8개월</td><td>12개월</td></tr>
         </tbody>
       </table>
@@ -682,19 +837,19 @@
 <!-- ======================================================
      견적 상세 (접이식)
 ====================================================== -->
-<section id="details" style="padding: 4.5rem 1.5rem;">
-  <div style="max-width: 860px; margin: 0 auto;">
-    <div style="margin-bottom: 2.5rem;">
+<section id="details" style="padding: clamp(4rem,8vh,5.5rem) 1.5rem;">
+  <div style="max-width: 860px; margin: 0 auto;" class="reveal">
+    <div class="section-header">
       <p class="section-label">상세 조건</p>
-      <h2 style="font-size: 1.65rem; font-weight: 800; color: #e8edf2; margin-top: 0.4rem; letter-spacing: -0.01em;">핵심 조건 요약</h2>
-      <p style="color: #7aa2cb; font-size: 0.9rem; margin-top: 0.4rem;">항목을 클릭하면 상세 내용을 확인할 수 있습니다.</p>
+      <h2>핵심 조건 요약</h2>
+      <p style="font-size: 0.9rem;">항목을 클릭하면 상세 내용을 확인할 수 있습니다.</p>
     </div>
 
     <!-- ROI -->
     <details>
       <summary>
         <span style="display:flex;align-items:center;gap:0.6rem;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
           ROI 분석 — 이 투자의 가치
         </span>
       </summary>
@@ -708,7 +863,7 @@
             <tr><td>수기 오류·재측정 공수</td><td>주 3~5h</td><td>실시간 자동화</td><td>780시간/년 추가</td></tr>
           </tbody>
         </table>
-        <p style="font-size:0.8rem;color:#4e83b9;">* 수치는 보수적 추정·예시입니다. 표준형(4,200만원) 기준 보수적 시나리오에서도 약 12~15개월 내 투자 회수 가능합니다. 인건비는 현금 회수가 아닌 교관 고급 전력의 재배치 가치(opportunity reallocation)로 이해해 주십시오.</p>
+        <p style="font-size:0.8rem;color:#5a6b7c;">* 수치는 보수적 추정·예시입니다. 표준형(4,200만원) 기준 보수적 시나리오에서도 약 12~15개월 내 투자 회수 가능합니다. 인건비는 현금 회수가 아닌 교관 고급 전력의 재배치 가치(opportunity reallocation)로 이해해 주십시오.</p>
       </div>
     </details>
 
@@ -716,12 +871,12 @@
     <details>
       <summary>
         <span style="display:flex;align-items:center;gap:0.6rem;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           프로젝트 일정 — 4 Phase (표준형 기준)
         </span>
       </summary>
       <div class="details-body">
-        <p style="margin-bottom:0.75rem; font-size:0.8rem; color:#4e83b9;">총 사업 기간 2026년 7월 ~ 2027년 6월 기준. QJC 개발은 8개월 내 완료 목표.</p>
+        <p style="margin-bottom:0.75rem; font-size:0.8rem; color:#5a6b7c;">총 사업 기간 2026년 7월 ~ 2027년 6월 기준. QJC 개발은 8개월 내 완료 목표.</p>
         <table class="data-table">
           <thead><tr><th>단계</th><th>기간</th><th>주요 산출물</th><th>마일스톤</th></tr></thead>
           <tbody>
@@ -738,7 +893,7 @@
     <details>
       <summary>
         <span style="display:flex;align-items:center;gap:0.6rem;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           계약 조건 전제 — 검수·CR·하자보수
         </span>
       </summary>
@@ -746,7 +901,7 @@
         <p style="margin-bottom:0.5rem;"><strong style="color:#e8edf2;">검수 디커플링.</strong> 검수 주체는 레오케어(발주처) 산출물 검수로 한정합니다. 군 실증 통과 여부, 타 컨소시엄사(오파스넷·ETRI) 진척과 QJC 대금 지급은 연계되지 않습니다. 산출물 인도 후 10영업일 이내 서면 이의가 없으면 검수 완료 간주.</p>
         <p style="margin-bottom:0.5rem;"><strong style="color:#e8edf2;">CR 절차.</strong> CR 수신 후 7영업일 이내 서면 회신. 무응답 시 QJC 산정안 확정. 납기는 추가 공수에 상응하여 자동 연장.</p>
         <p style="margin-bottom:0.5rem;"><strong style="color:#e8edf2;">하자보수 범위.</strong> 약정 사양 대비 불일치 및 정상 사용 환경 결함만 해당. 오파스넷 데이터 변경, ETRI 모델 출력 변경, 운영환경 변경, 추가 기능 요청은 하자 아님.</p>
-        <p style="font-size:0.8rem;color:#4e83b9;">* 데이터 인터페이스 명세가 Phase 1 완료 시까지 미확정인 경우 ±30% 범위 내 재협의 절차 적용.</p>
+        <p style="font-size:0.8rem;color:#5a6b7c;">* 데이터 인터페이스 명세가 Phase 1 완료 시까지 미확정인 경우 ±30% 범위 내 재협의 절차 적용.</p>
       </div>
     </details>
 
@@ -754,7 +909,7 @@
     <details>
       <summary>
         <span style="display:flex;align-items:center;gap:0.6rem;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8a020" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           지식재산권 · 출연금 환수 · QJC 지위
         </span>
       </summary>
@@ -762,7 +917,7 @@
         <p style="margin-bottom:0.5rem;"><strong style="color:#e8edf2;">Background IP 유보.</strong> QJC 사전 보유 범용 컴포넌트·UI 프레임워크·차트 라이브러리는 성과물과 분리하여 QJC 단독 소유 유보. 유·무형 성과물은 RFP 규정에 따른 공동소유 원칙 수용.</p>
         <p style="margin-bottom:0.5rem;"><strong style="color:#e8edf2;">출연금 환수 시 QJC 지위.</strong> QJC의 법적 지위는 레오케어와의 도급 용역 수행자. QJC는 IITP 협약 당사자가 아니며, 출연금 집행·정산 결과와 무관하게 레오케어가 대금 지급 책임을 부담합니다.</p>
         <p style="margin-bottom:0.5rem;"><strong style="color:#e8edf2;">컨소시엄 미선정 시.</strong> 선정 및 IITP 협약 체결을 정지조건으로 합니다. 미선정 시 착수 전 상호 실비만 정산.</p>
-        <p style="font-size:0.8rem;color:#4e83b9;">* 법적 효력은 정식 개발 용역 계약서 체결 시 발생합니다. IP 조항 상세는 변호사 검토를 권고드립니다.</p>
+        <p style="font-size:0.8rem;color:#5a6b7c;">* 법적 효력은 정식 개발 용역 계약서 체결 시 발생합니다. IP 조항 상세는 변호사 검토를 권고드립니다.</p>
       </div>
     </details>
   </div>
@@ -773,54 +928,55 @@
 <!-- ======================================================
      CTA / 다음 단계
 ====================================================== -->
-<section id="cta" style="padding: 4.5rem 1.5rem;">
-  <div style="max-width: 860px; margin: 0 auto;">
-    <div style="margin-bottom: 2.5rem;">
+<section id="cta" style="padding: clamp(4rem,8vh,5.5rem) 1.5rem; background: var(--c-surface2);">
+  <div style="max-width: 860px; margin: 0 auto;" class="reveal">
+    <div class="section-header">
       <p class="section-label">다음 단계</p>
-      <h2 style="font-size: 1.65rem; font-weight: 800; color: #e8edf2; margin-top: 0.4rem; letter-spacing: -0.01em;">6/1 제안서 마감 전 3단계</h2>
+      <h2>6/1 제안서 마감 전 3단계</h2>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 3rem;">
-      <div style="display: flex; align-items: flex-start; gap: 1.25rem; background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.15); border-radius: 12px; padding: 1.25rem 1.5rem;">
+      <div style="display: flex; align-items: flex-start; gap: 1.25rem; background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.15); border-radius: 14px; padding: 1.25rem 1.5rem; transition: border-color var(--dur-base) var(--ease-out);">
         <div class="step-num">1</div>
         <div>
           <div style="font-weight: 700; color: #e8edf2; margin-bottom: 0.25rem;">자료 검토 — 데모 확인 + Tier 선택</div>
-          <div style="font-size: 0.875rem; color: #7aa2cb;">위 인터랙티브 데모로 QJC 구현 역량을 직접 확인하고, 3-Tier 중 컨소시엄 예산에 맞는 Tier를 선택합니다. 예산이 제한적이면 모듈 A를 빼고 기본형으로 조정도 가능합니다.</div>
+          <div style="font-size: 0.875rem; color: #7aa2cb; line-height: 1.7;">위 인터랙티브 데모로 QJC 구현 역량을 직접 확인하고, 3-Tier 중 컨소시엄 예산에 맞는 Tier를 선택합니다. 예산이 제한적이면 모듈 A를 빼고 기본형으로 조정도 가능합니다.</div>
         </div>
       </div>
 
-      <div style="display: flex; align-items: flex-start; gap: 1.25rem; background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.15); border-radius: 12px; padding: 1.25rem 1.5rem;">
+      <div style="display: flex; align-items: flex-start; gap: 1.25rem; background: rgba(14,36,64,0.5); border: 1px solid rgba(74,131,185,0.15); border-radius: 14px; padding: 1.25rem 1.5rem;">
         <div class="step-num">2</div>
         <div>
           <div style="font-weight: 700; color: #e8edf2; margin-bottom: 0.25rem;">견적·계약 확정 — 협의 후 계약서 체결</div>
-          <div style="font-size: 0.875rem; color: #7aa2cb;">선택 Tier 기준으로 개발 용역 계약서를 작성합니다. 지재권·검수·출연금 환수 조항은 협의하여 상호 합의합니다. 컨소시엄 선정이 정지조건입니다.</div>
+          <div style="font-size: 0.875rem; color: #7aa2cb; line-height: 1.7;">선택 Tier 기준으로 개발 용역 계약서를 작성합니다. 지재권·검수·출연금 환수 조항은 협의하여 상호 합의합니다. 컨소시엄 선정이 정지조건입니다.</div>
         </div>
       </div>
 
-      <div style="display: flex; align-items: flex-start; gap: 1.25rem; background: rgba(26,58,92,0.5); border: 1px solid rgba(232,160,32,0.3); border-radius: 12px; padding: 1.25rem 1.5rem;">
+      <div style="display: flex; align-items: flex-start; gap: 1.25rem; background: rgba(26,58,92,0.5); border: 1px solid rgba(232,160,32,0.3); border-radius: 14px; padding: 1.25rem 1.5rem;">
         <div class="step-num" style="background: rgba(184,125,16,0.2); border-color: rgba(232,160,32,0.4); color: #f5c665;">3</div>
         <div>
-          <div style="font-weight: 700; color: #f5c665; margin-bottom: 0.25rem;">제안서 반영 + QJC 킥오프 <span class="badge badge-urgent" style="font-size:0.65rem;vertical-align:middle;margin-left:0.5rem;">6/1 마감</span></div>
-          <div style="font-size: 0.875rem; color: #7aa2cb;">컨소시엄 제안서에 QJC 프론트엔드 담당으로 기재. 선정 후 계약 체결 → 7일 이내 Phase 1 킥오프.</div>
+          <div style="font-weight: 700; color: #f5c665; margin-bottom: 0.25rem;">제안서 반영 + QJC 킥오프 <span class="badge badge-urgent" style="font-size:0.62rem;vertical-align:middle;margin-left:0.5rem;">6/1 마감</span></div>
+          <div style="font-size: 0.875rem; color: #7aa2cb; line-height: 1.7;">컨소시엄 제안서에 QJC 프론트엔드 담당으로 기재. 선정 후 계약 체결 → 7일 이내 Phase 1 킥오프.</div>
         </div>
       </div>
     </div>
 
     <!-- Contact card -->
-    <div style="background: linear-gradient(135deg, rgba(26,58,92,0.8), rgba(14,36,64,0.9)); border: 1px solid rgba(232,160,32,0.3); border-radius: 16px; padding: 2.5rem; text-align: center;">
-      <div style="font-size: 1.3rem; font-weight: 800; color: #e8edf2; margin-bottom: 0.5rem;">QJC 정상록</div>
-      <div style="font-size: 0.875rem; color: #7aa2cb; margin-bottom: 1.5rem;">퀀텀점프클럽 (QUANTUM JUMP CLUB) 대표</div>
-      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-bottom: 1.75rem;">
+    <div style="background: linear-gradient(135deg, rgba(26,58,92,0.8), rgba(14,36,64,0.9)); border: 1px solid rgba(232,160,32,0.35); border-top: 3px solid rgba(232,160,32,0.55); border-radius: 18px; padding: 2.5rem; text-align: center;">
+      <div style="font-size: 1.35rem; font-weight: 800; color: #e8edf2; margin-bottom: 0.5rem;">QJC 정상록</div>
+      <div style="font-size: 0.875rem; color: #7aa2cb; margin-bottom: 1.75rem;">퀀텀점프클럽 (QUANTUM JUMP CLUB) 대표</div>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.75rem; margin-bottom: 1.75rem;">
         <a href="https://qjc.app" target="_blank" rel="noopener" class="btn-primary" style="font-size: 0.9rem; padding: 0.65rem 1.5rem;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
           qjc.app
         </a>
+        <span style="color: #2d6a9f; font-size: 0.85rem; user-select: none;">또는</span>
         <a href="mailto:contact@quantumjumpclub.com" class="btn-primary" style="font-size: 0.9rem; padding: 0.65rem 1.5rem;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           contact@quantumjumpclub.com
         </a>
       </div>
-      <div style="font-size: 0.8rem; color: #4e83b9;">견적번호 QJC-2026-0529-LEO-001 · 유효기간 2026년 6월 28일</div>
+      <div style="font-size: 0.8rem; color: #7aa2cb;">견적번호 QJC-2026-0529-LEO-001 · 유효기간 2026년 6월 28일</div>
     </div>
   </div>
 </section>
@@ -828,10 +984,16 @@
 <!-- ======================================================
      FOOTER
 ====================================================== -->
-<footer style="background: rgba(4,12,28,0.8); border-top: 1px solid rgba(74,131,185,0.1); padding: 2rem 1.5rem; text-align: center;">
+<footer style="background: rgba(4,12,28,0.9); border-top: 1px solid rgba(74,131,185,0.1); padding: 2rem 1.5rem; text-align: center;">
   <div style="max-width: 860px; margin: 0 auto;">
     <div style="font-weight: 700; color: #7aa2cb; margin-bottom: 0.5rem;">퀀텀점프클럽 (QUANTUM JUMP CLUB)</div>
-    <div style="font-size: 0.78rem; color: #4e83b9; margin-bottom: 0.75rem;">사업자등록번호 240-46-01342 · qjc.app · contact@quantumjumpclub.com</div>
+    <div class="footer-info" style="font-size: 0.78rem; color: #4e83b9; margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 0.75rem;">
+      <span>사업자등록번호 240-46-01342</span>
+      <span aria-hidden="true">·</span>
+      <span>qjc.app</span>
+      <span aria-hidden="true">·</span>
+      <span>contact@quantumjumpclub.com</span>
+    </div>
     <div style="font-size: 0.75rem; color: #2d6a9f; line-height: 1.6;">
       본 제안은 2026-05-29 레오케어 김태평 대표와의 미팅 및 RFP(2026-AX-Sprint-14)를 기반으로 작성되었습니다.
       최종 법적·계약적 효력은 정식 개발 용역 계약서 체결 시 발생합니다.<br/>
@@ -843,7 +1005,7 @@
 <!-- ======================================================
      LIGHTBOX
 ====================================================== -->
-<div id="lightbox" onclick="closeLightbox()">
+<div id="lightbox" onclick="closeLightbox()" role="dialog" aria-modal="true" aria-label="이미지 확대 보기">
   <img id="lightbox-img" src="" alt="스크린샷 확대" />
 </div>
 
@@ -868,20 +1030,43 @@
     function update() {
       const now = new Date();
       const diff = deadline - now;
+      const badge = document.getElementById('countdown-badge');
+      if (!badge) return;
       if (diff <= 0) {
-        document.getElementById('countdown-badge').innerHTML =
-          '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 마감 완료';
+        badge.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 마감 완료';
         return;
       }
       const days = Math.floor(diff / 86400000);
-      const hours = Math.floor((diff % 86400000) / 3600000);
-      const badge = document.getElementById('countdown-badge');
       badge.innerHTML =
-        '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' +
+        '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' +
         (days > 0 ? 'D-' + days + ' · ' : '') + '6/1 마감';
     }
     update();
     setInterval(update, 60000);
+  })();
+
+  // Scroll reveal (Intersection Observer + prefers-reduced-motion)
+  (function() {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+    const targets = document.querySelectorAll('.reveal');
+    if (!targets.length) return;
+    const io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.07, rootMargin: '0px 0px -40px 0px' });
+    targets.forEach(function(el) { io.observe(el); });
+    // Fallback: 캡처·봇·PDF 렌더러·스크롤 미발생·저성능 환경에서 1.5s 후 전체 표출 보장
+    setTimeout(function() {
+      document.querySelectorAll('.reveal:not(.visible)').forEach(function(el) {
+        el.classList.add('visible');
+        io.unobserve(el);
+      });
+    }, 1500);
   })();
 </script>
 
