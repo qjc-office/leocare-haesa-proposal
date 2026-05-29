@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>해군사관학교 AI 체력관리 시스템 — QJC</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 UMD -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Pretendard Font -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              50:  '#eef3f9',
+              100: '#d5e1ee',
+              200: '#a9c2dd',
+              300: '#7aa2cb',
+              400: '#4e83b9',
+              500: '#2d6a9f',
+              600: '#1a3a5c',
+              700: '#143050',
+              800: '#0e2440',
+              900: '#081830',
+            },
+            accent: {
+              DEFAULT: '#e8a020',
+              light:   '#f5c665',
+              dark:    '#b57d10',
+            },
+            danger:  '#c0392b',
+            warn:    '#e67e22',
+            safe:    '#27ae60',
+          },
+          fontFamily: {
+            sans: ['Pretendard Variable', 'Pretendard', '-apple-system', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body, #root { height: 100%; margin: 0; padding: 0; }
+    body { font-family: 'Pretendard Variable', 'Pretendard', -apple-system, system-ui, sans-serif; }
+
+    /* 스크롤바 스타일 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+    /* 차트 컨테이너 */
+    .chart-container { position: relative; width: 100%; }
+
+    /* 아바타 SVG 애니메이션 */
+    @keyframes pulse-risk {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    .animate-risk { animation: pulse-risk 2s ease-in-out infinite; }
+
+    /* 게이지 배경 */
+    .gauge-track { fill: none; stroke: #e2e8f0; stroke-width: 12; }
+    .gauge-fill   { fill: none; stroke-width: 12; stroke-linecap: round;
+                    transition: stroke-dashoffset 0.8s ease, stroke 0.4s ease; }
+
+    /* 위험도 뱃지 */
+    .badge-safe   { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .badge-warn   { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .badge-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* 라디오 차트용 */
+    .radar-label { font-size: 11px; fill: #475569; font-family: 'Pretendard Variable', sans-serif; }
+
+    /* 선택된 생도 행 */
+    .cadet-row:hover { background: #eff6ff; cursor: pointer; }
+    .cadet-row.selected { background: #dbeafe; border-left: 3px solid #1a3a5c; }
+
+    /* 워터마크 */
+    .watermark {
+      position: fixed; bottom: 10px; right: 14px;
+      font-size: 11px; color: #94a3b8; z-index: 9999;
+      pointer-events: none; user-select: none;
+    }
+
+    /* 타이틀바 그라디언트 */
+    .titlebar {
+      background: linear-gradient(135deg, #0e2440 0%, #1a3a5c 60%, #2d6a9f 100%);
+    }
+
+    /* KPI 카드 */
+    .kpi-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      transition: box-shadow 0.2s;
+    }
+    .kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+    /* 섹션 헤더 */
+    .section-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body class="bg-slate-100">
+
+<div id="root"></div>
+<div class="watermark">Prototype Demo — 더미 데이터 / QJC 2026-05-29</div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ═══════════════════════════════════════════════════════
+   더미 데이터 (웨어러블 워치 + 스마트 운동기구 시계열 JSON)
+   ═══════════════════════════════════════════════════════ */
+
+const WEEKS = ['W1','W2','W3','W4','W5','W6','W7','W8'];
+
+const CADETS = [
+  {
+    id: 'C001', name: '생도 001', grade: '4학년', company: '1중대',
+    height: 175, weight: 72, bodyType: 'B',
+    run1500: [6.8, 6.5, 6.3, 6.1, 5.9, 5.8, 5.7, 5.6],      // 분 (낮을수록 우수)
+    pushup:  [42, 45, 47, 50, 52, 54, 55, 57],                 // 회
+    situp:   [38, 40, 42, 44, 46, 47, 49, 50],                 // 회
+    hrAvg:   [138, 142, 145, 140, 136, 133, 131, 128],         // bpm
+    hrMax:   [185, 188, 190, 186, 184, 182, 180, 178],
+    sleepH:  [6.5, 7.0, 6.8, 7.2, 7.5, 7.3, 7.8, 8.0],
+    injuryRisk: 18,  // 0~100
+    radarScores: { 근력: 78, 근지구력: 82, 유산소: 88, 유연성: 65, 균형감: 74, 회복력: 80 },
+    targetRun: 5.2, targetPushup: 65, targetSitup: 60,
+    prescription: '유산소 기반 우수. 유연성 보강을 위한 스트레칭 루틴(매일 15분) 추가 권장. 현 훈련 강도 유지.',
+    riskLabel: '낮음',
+  },
+  {
+    id: 'C002', name: '생도 002', grade: '3학년', company: '1중대',
+    height: 180, weight: 85, bodyType: 'A',
+    run1500: [7.2, 7.0, 6.9, 7.1, 6.8, 6.7, 6.6, 6.5],
+    pushup:  [55, 57, 58, 55, 59, 61, 62, 63],
+    situp:   [45, 46, 47, 44, 48, 50, 51, 52],
+    hrAvg:   [145, 148, 152, 155, 150, 147, 144, 141],
+    hrMax:   [192, 194, 196, 198, 195, 192, 190, 188],
+    sleepH:  [6.0, 5.8, 5.5, 6.2, 6.8, 7.0, 7.2, 7.5],
+    injuryRisk: 45,
+    radarScores: { 근력: 88, 근지구력: 72, 유산소: 65, 유연성: 58, 균형감: 69, 회복력: 61 },
+    targetRun: 5.5, targetPushup: 70, targetSitup: 62,
+    prescription: '근력 우수하나 심폐지구력 개선 필요. 주 3회 유산소 훈련 강화. 수면 패턴 정상화 우선.',
+    riskLabel: '주의',
+  },
+  {
+    id: 'C003', name: '생도 003', grade: '2학년', company: '2중대',
+    height: 168, weight: 65, bodyType: 'C',
+    run1500: [6.2, 6.0, 5.8, 5.6, 5.5, 5.4, 5.3, 5.2],
+    pushup:  [38, 40, 42, 44, 45, 47, 48, 50],
+    situp:   [50, 52, 54, 56, 57, 58, 60, 61],
+    hrAvg:   [128, 126, 124, 122, 120, 118, 117, 115],
+    hrMax:   [178, 176, 175, 174, 172, 170, 169, 168],
+    sleepH:  [7.5, 7.8, 8.0, 7.9, 8.2, 8.0, 8.1, 8.3],
+    injuryRisk: 8,
+    radarScores: { 근력: 65, 근지구력: 85, 유산소: 92, 유연성: 80, 균형감: 88, 회복력: 90 },
+    targetRun: 4.8, targetPushup: 58, targetSitup: 65,
+    prescription: '전반적 우수. 상체 근력 보강(팔굽혀펴기 목표 +8회) 집중 훈련 권장.',
+    riskLabel: '낮음',
+  },
+  {
+    id: 'C004', name: '생도 004', grade: '3학년', company: '2중대',
+    height: 177, weight: 80, bodyType: 'A',
+    run1500: [7.8, 8.1, 7.9, 8.2, 8.0, 7.8, 7.6, 7.4],
+    pushup:  [30, 29, 32, 31, 33, 35, 36, 37],
+    situp:   [32, 30, 33, 31, 34, 35, 36, 37],
+    hrAvg:   [158, 162, 165, 168, 163, 160, 158, 155],
+    hrMax:   [198, 201, 203, 205, 200, 198, 196, 194],
+    sleepH:  [5.5, 5.2, 5.8, 5.0, 5.5, 6.0, 6.2, 6.5],
+    injuryRisk: 74,
+    radarScores: { 근력: 52, 근지구력: 48, 유산소: 44, 유연성: 45, 균형감: 50, 회복력: 40 },
+    targetRun: 6.5, targetPushup: 48, targetSitup: 48,
+    prescription: '⚠ 전반적 체력 저하 + 심박수 이상 상승. 즉시 의료 검진 권고. 훈련 강도 40% 감축.',
+    riskLabel: '위험',
+  },
+  {
+    id: 'C005', name: '생도 005', grade: '1학년', company: '3중대',
+    height: 172, weight: 70, bodyType: 'B',
+    run1500: [7.0, 6.8, 6.6, 6.4, 6.2, 6.1, 6.0, 5.9],
+    pushup:  [40, 42, 43, 45, 46, 47, 48, 49],
+    situp:   [42, 44, 45, 46, 47, 48, 49, 50],
+    hrAvg:   [140, 138, 136, 134, 132, 131, 130, 129],
+    hrMax:   [186, 184, 183, 182, 181, 180, 179, 178],
+    sleepH:  [7.0, 7.2, 7.1, 7.3, 7.4, 7.5, 7.6, 7.8],
+    injuryRisk: 22,
+    radarScores: { 근력: 72, 근지구력: 76, 유산소: 74, 유연성: 70, 균형감: 72, 회복력: 75 },
+    targetRun: 5.5, targetPushup: 58, targetSitup: 58,
+    prescription: '균형잡힌 체력. 전 영역 점진적 향상 추이. 현 훈련 프로그램 유지 권장.',
+    riskLabel: '낮음',
+  },
+  {
+    id: 'C006', name: '생도 006', grade: '4학년', company: '3중대',
+    height: 182, weight: 88, bodyType: 'A',
+    run1500: [6.5, 6.7, 6.6, 6.9, 7.1, 6.8, 6.7, 6.5],
+    pushup:  [62, 60, 63, 58, 55, 58, 60, 62],
+    situp:   [55, 53, 55, 51, 49, 51, 53, 55],
+    hrAvg:   [148, 150, 152, 158, 162, 157, 153, 149],
+    hrMax:   [190, 192, 194, 196, 199, 195, 192, 190],
+    sleepH:  [6.8, 6.5, 6.2, 5.8, 5.5, 6.0, 6.5, 6.8],
+    injuryRisk: 52,
+    radarScores: { 근력: 86, 근지구력: 68, 유산소: 62, 유연성: 55, 균형감: 64, 회복력: 58 },
+    targetRun: 5.8, targetPushup: 72, targetSitup: 62,
+    prescription: '근력 최상위 그룹. 최근 4주 성과 하락 추이 주목. 과훈련 징후 — 회복 주간 도입 권장.',
+    riskLabel: '주의',
+  },
+  {
+    id: 'C007', name: '생도 007', grade: '2학년', company: '1중대',
+    height: 170, weight: 68, bodyType: 'B',
+    run1500: [6.0, 5.8, 5.7, 5.6, 5.5, 5.4, 5.3, 5.3],
+    pushup:  [48, 50, 51, 53, 54, 55, 56, 57],
+    situp:   [52, 53, 54, 55, 56, 57, 58, 59],
+    hrAvg:   [130, 128, 127, 126, 125, 124, 123, 122],
+    hrMax:   [182, 180, 179, 178, 177, 176, 175, 174],
+    sleepH:  [7.8, 7.9, 8.0, 8.1, 8.0, 8.2, 8.1, 8.3],
+    injuryRisk: 12,
+    radarScores: { 근력: 76, 근지구력: 84, 유산소: 88, 유연성: 75, 균형감: 82, 회복력: 86 },
+    targetRun: 5.0, targetPushup: 62, targetSitup: 65,
+    prescription: '전반 우수 유지. 달리기 목표(5분대) 달성 시 특급 대상. 현 페이스 유지.',
+    riskLabel: '낮음',
+  },
+  {
+    id: 'C008', name: '생도 008', grade: '1학년', company: '4중대',
+    height: 165, weight: 62, bodyType: 'C',
+    run1500: [8.2, 8.0, 7.8, 7.5, 7.2, 7.0, 6.8, 6.6],
+    pushup:  [25, 27, 29, 31, 32, 34, 35, 36],
+    situp:   [28, 30, 32, 33, 35, 36, 37, 38],
+    hrAvg:   [152, 155, 158, 154, 150, 148, 146, 144],
+    hrMax:   [196, 198, 200, 197, 194, 192, 190, 188],
+    sleepH:  [6.2, 6.5, 6.8, 7.0, 7.2, 7.3, 7.5, 7.8],
+    injuryRisk: 38,
+    radarScores: { 근력: 48, 근지구력: 55, 유산소: 52, 유연성: 62, 균형감: 58, 회복력: 60 },
+    targetRun: 6.5, targetPushup: 45, targetSitup: 48,
+    prescription: '입교 초기 대비 뚜렷한 향상. 달리기 페이스 개선 우선. 영양 관리 병행 권장.',
+    riskLabel: '주의',
+  },
+  // P0-4: 4중대 더미 생도 2명 추가 — 막대차트 균등화
+  {
+    id: 'C009', name: '생도 009', grade: '2학년', company: '4중대',
+    height: 173, weight: 74, bodyType: 'B',
+    run1500: [7.1, 6.9, 6.8, 6.6, 6.4, 6.3, 6.2, 6.1],
+    pushup:  [44, 46, 47, 49, 50, 51, 52, 53],
+    situp:   [40, 42, 43, 44, 45, 46, 47, 48],
+    hrAvg:   [142, 140, 138, 136, 134, 133, 132, 131],
+    hrMax:   [188, 186, 185, 184, 182, 181, 180, 179],
+    sleepH:  [7.0, 7.2, 7.4, 7.5, 7.6, 7.7, 7.8, 8.0],
+    injuryRisk: 20,
+    radarScores: { 근력: 70, 근지구력: 74, 유산소: 76, 유연성: 68, 균형감: 72, 회복력: 74 },
+    targetRun: 5.6, targetPushup: 60, targetSitup: 56,
+    prescription: '꾸준한 향상 추이. 달리기·근지구력 균형 발전 중. 현 훈련 강도 유지 권장.',
+    riskLabel: '낮음',
+  },
+  {
+    id: 'C010', name: '생도 010', grade: '3학년', company: '4중대',
+    height: 178, weight: 78, bodyType: 'A',
+    run1500: [6.9, 6.8, 7.0, 7.2, 7.0, 6.8, 6.7, 6.5],
+    pushup:  [50, 52, 50, 48, 51, 53, 54, 55],
+    situp:   [46, 48, 46, 44, 47, 49, 50, 51],
+    hrAvg:   [146, 148, 151, 155, 151, 148, 146, 144],
+    hrMax:   [191, 193, 195, 197, 194, 191, 190, 188],
+    sleepH:  [6.5, 6.3, 6.0, 6.4, 6.8, 7.0, 7.2, 7.4],
+    injuryRisk: 41,
+    radarScores: { 근력: 80, 근지구력: 66, 유산소: 63, 유연성: 60, 균형감: 67, 회복력: 62 },
+    targetRun: 5.8, targetPushup: 65, targetSitup: 60,
+    prescription: '근력 양호. 중반 성과 일시 하락 후 회복 중. 수면 시간 확보로 회복력 개선 권장.',
+    riskLabel: '주의',
+  },
+];
+
+/* ═══════════════════════════════════════════════════════
+   아이콘 SVG 컴포넌트
+   ═══════════════════════════════════════════════════════ */
+
+const IconRun = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/>
+    <path d="M7.5 13.5C7 14.5 6 15.5 6 17l1.5 3"/>
+    <path d="M17.5 13.5C18 14.5 19 15.5 19 17l-1.5 3"/>
+    <path d="M8 13l3-3 2 2 3-3"/>
+  </svg>
+);
+
+const IconPush = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="3" rx="1"/>
+    <path d="M12 8V5M12 16v3"/>
+    <circle cx="12" cy="4" r="1.5"/>
+  </svg>
+);
+
+const IconAlert = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const IconCheck = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+);
+
+const IconWatch = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="5" y="3" width="14" height="18" rx="2"/>
+    <path d="M9 3v2M15 3v2M9 19v2M15 19v2"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+
+const IconUsers = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const IconTrend = ({ up }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={up ? '#22c55e' : '#ef4444'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    {up
+      ? <><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></>
+      : <><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></>
+    }
+  </svg>
+);
+
+// P2: 윗몸일으키기 전용 아이콘
+const IconSitup = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="4" r="1.5"/>
+    <path d="M5 20h6l2-5 2 3 2-8"/>
+    <path d="M5 12c2-3 4-4 7-4"/>
+  </svg>
+);
+
+/* ═══════════════════════════════════════════════════════
+   아바타 SVG (체형 타입별)
+   ═══════════════════════════════════════════════════════ */
+
+function AvatarSVG({ bodyType, riskLevel, height: h, weight: w }) {
+  // 체형별 SVG 파라미터
+  const profiles = {
+    A: { shoulderW: 48, waistW: 38, hipW: 44, neckH: 22, torsoH: 62, legH: 80, armW: 14 }, // 근육형
+    B: { shoulderW: 40, waistW: 32, hipW: 38, neckH: 20, torsoH: 58, legH: 76, armW: 11 }, // 표준형
+    C: { shoulderW: 34, waistW: 28, hipW: 32, neckH: 18, torsoH: 54, legH: 72, armW: 9  }, // 슬림형
+  };
+  const p = profiles[bodyType] || profiles['B'];
+
+  const riskColors = { '낮음': '#27ae60', '주의': '#e67e22', '위험': '#c0392b' };
+  const riskColor = riskColors[riskLevel] || '#27ae60';
+  const isRisk = riskLevel === '위험';
+
+  const cx = 100; // 중심 x
+  const headR = 24;
+  const headY = 30;
+  const neckY = headY + headR;
+  const shoulderY = neckY + p.neckH;
+  const torsoBottomY = shoulderY + p.torsoH;
+  const kneeY = torsoBottomY + p.legH * 0.45;
+  const footY = torsoBottomY + p.legH;
+
+  // 어깨 좌우
+  const lsX = cx - p.shoulderW / 2;
+  const rsX = cx + p.shoulderW / 2;
+  // 허리
+  const lwX = cx - p.waistW / 2;
+  const rwX = cx + p.waistW / 2;
+  // 엉덩이
+  const lhX = cx - p.hipW / 2;
+  const rhX = cx + p.hipW / 2;
+
+  return (
+    <svg viewBox="0 0 200 230" className={`w-full max-w-[160px] mx-auto block ${isRisk ? 'animate-risk' : ''}`}>
+      {/* 위험도 글로우 */}
+      {riskLevel !== '낮음' && (
+        <ellipse cx={cx} cy={120} rx={55} ry={100} fill={riskColor} fillOpacity="0.08" />
+      )}
+
+      {/* 머리 */}
+      <circle cx={cx} cy={headY} r={headR} fill="#f5d0a9" stroke="#d4a574" strokeWidth="1.5"/>
+      {/* 눈 */}
+      <ellipse cx={cx - 8} cy={headY - 3} rx="4" ry="4.5" fill="white" stroke="#bbb" strokeWidth="0.5"/>
+      <ellipse cx={cx + 8} cy={headY - 3} rx="4" ry="4.5" fill="white" stroke="#bbb" strokeWidth="0.5"/>
+      <circle cx={cx - 8} cy={headY - 3} r="2.5" fill="#4a3728"/>
+      <circle cx={cx + 8} cy={headY - 3} r="2.5" fill="#4a3728"/>
+      {/* 입 */}
+      <path d={`M ${cx-6} ${headY+10} Q ${cx} ${headY+14} ${cx+6} ${headY+10}`} fill="none" stroke="#c0856a" strokeWidth="1.2"/>
+      {/* 귀 */}
+      <ellipse cx={cx - headR} cy={headY} rx="5" ry="7" fill="#f0c090" stroke="#d4a574" strokeWidth="1"/>
+      <ellipse cx={cx + headR} cy={headY} rx="5" ry="7" fill="#f0c090" stroke="#d4a574" strokeWidth="1"/>
+
+      {/* 목 */}
+      <rect x={cx - 8} y={neckY} width={16} height={p.neckH} rx="3" fill="#f0c090"/>
+
+      {/* 몸통 (trapezoid) */}
+      <path
+        d={`M ${lsX} ${shoulderY} L ${rsX} ${shoulderY} L ${rwX} ${torsoBottomY} L ${lwX} ${torsoBottomY} Z`}
+        fill="#1a3a5c" stroke="#0e2440" strokeWidth="1.5"
+      />
+      {/* 군복 디테일 */}
+      <line x1={cx} y1={shoulderY + 6} x2={cx} y2={torsoBottomY - 8} stroke="#2d6a9f" strokeWidth="2"/>
+      <rect x={cx - 10} y={shoulderY + 18} width={8} height={10} rx="1" fill="#e8a020" opacity="0.9"/>
+      <rect x={cx + 2}  y={shoulderY + 18} width={8} height={10} rx="1" fill="#e8a020" opacity="0.9"/>
+      {/* 견장 */}
+      <rect x={lsX + 2} y={shoulderY - 4} width={14} height={8} rx="2" fill="#2d6a9f" stroke="#1a3a5c" strokeWidth="1"/>
+      <rect x={rsX - 16} y={shoulderY - 4} width={14} height={8} rx="2" fill="#2d6a9f" stroke="#1a3a5c" strokeWidth="1"/>
+
+      {/* 팔 */}
+      <path d={`M ${lsX + 4} ${shoulderY + 6} L ${lsX - 6} ${shoulderY + 50} L ${lsX} ${shoulderY + 50}`}
+        fill="#1a3a5c" stroke="#0e2440" strokeWidth="1.5"/>
+      <path d={`M ${rsX - 4} ${shoulderY + 6} L ${rsX + 6} ${shoulderY + 50} L ${rsX} ${shoulderY + 50}`}
+        fill="#1a3a5c" stroke="#0e2440" strokeWidth="1.5"/>
+      {/* 손 */}
+      <ellipse cx={lsX - 4} cy={shoulderY + 54} rx="7" ry="5" fill="#f0c090"/>
+      <ellipse cx={rsX + 4} cy={shoulderY + 54} rx="7" ry="5" fill="#f0c090"/>
+
+      {/* 바지 */}
+      <path
+        d={`M ${lhX} ${torsoBottomY} L ${rhX} ${torsoBottomY} L ${cx + 14} ${kneeY} L ${cx + 8} ${footY} L ${cx - 2} ${footY} L ${cx - 10} ${kneeY} Z`}
+        fill="#2d4a6e" stroke="#1a3a5c" strokeWidth="1"/>
+      <line x1={cx} y1={torsoBottomY} x2={cx} y2={kneeY + 10} stroke="#1a3a5c" strokeWidth="1.5"/>
+
+      {/* 신발 */}
+      <ellipse cx={cx - 6} cy={footY + 4} rx="14" ry="5" fill="#1a1a2e"/>
+      <ellipse cx={cx + 10} cy={footY + 4} rx="14" ry="5" fill="#1a1a2e"/>
+
+      {/* 갤럭시 워치 */}
+      <rect x={lsX - 10} y={shoulderY + 44} width={12} height={10} rx="3" fill="#334155" stroke="#64748b" strokeWidth="0.8"/>
+      <rect x={lsX - 8}  y={shoulderY + 46} width={8}  height={6}  rx="1" fill={riskColor} fillOpacity="0.9"/>
+
+      {/* 위험도 인디케이터 */}
+      {riskLevel !== '낮음' && (
+        <g>
+          <circle cx={cx + p.shoulderW/2 + 10} cy={shoulderY - 8} r="9" fill={riskColor} opacity="0.9"/>
+          <text x={cx + p.shoulderW/2 + 10} y={shoulderY - 4} textAnchor="middle" fontSize="11" fill="white" fontWeight="bold">!</text>
+        </g>
+      )}
+
+      {/* 키/체중 텍스트 */}
+      <text x={cx} y={220} textAnchor="middle" fontSize="11" fill="#64748b" fontFamily="Pretendard Variable, sans-serif">
+        {h}cm / {w}kg
+      </text>
+    </svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   원형 게이지 컴포넌트
+   ═══════════════════════════════════════════════════════ */
+
+function CircleGauge({ value, maxVal = 100, label, color, size = 80 }) {
+  const r = (size - 16) / 2;
+  const circ = 2 * Math.PI * r;
+  // P1 수정: 위험도 높을수록 게이지 차오름 (value/maxVal = 채워진 비율, dashoffset = 빈 부분)
+  const filled = circ - (value / maxVal) * circ;
+  const pct = Math.round(value);
+
+  const c = color || (value < 30 ? '#27ae60' : value < 60 ? '#e67e22' : '#c0392b');
+  const cx = size / 2;
+  const cy = size / 2;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle className="gauge-track" cx={cx} cy={cy} r={r}/>
+        <circle
+          className="gauge-fill"
+          cx={cx} cy={cy} r={r}
+          stroke={c}
+          strokeDasharray={circ}
+          strokeDashoffset={filled}
+        />
+      </svg>
+      <div className="text-center -mt-1">
+        <div className="text-lg font-bold leading-none" style={{ color: c }}>{pct}<span className="text-xs font-normal">%</span></div>
+        <div className="text-xs text-slate-500 mt-0.5">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   레이더(방사형) 차트 — 순수 SVG
+   ═══════════════════════════════════════════════════════ */
+
+function RadarChart({ scores, size = 220 }) {
+  const keys = Object.keys(scores);
+  const vals = Object.values(scores);
+  const n = keys.length;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = size * 0.36;
+  const rings = [20, 40, 60, 80, 100];
+
+  const toXY = (idx, val) => {
+    const angle = (idx / n) * 2 * Math.PI - Math.PI / 2;
+    const r = (val / 100) * maxR;
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  };
+
+  const axisEnd = (idx) => toXY(idx, 100);
+  const dataPoints = vals.map((v, i) => toXY(i, v));
+  const polygon = dataPoints.map(p => `${p.x},${p.y}`).join(' ');
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* 방사형 배경 링 */}
+      {rings.map(r => {
+        const pts = keys.map((_, i) => toXY(i, r));
+        return (
+          <polygon
+            key={r}
+            points={pts.map(p => `${p.x},${p.y}`).join(' ')}
+            fill="none"
+            stroke="#e2e8f0"
+            strokeWidth={r === 100 ? 1.5 : 0.8}
+          />
+        );
+      })}
+
+      {/* 축 라인 */}
+      {keys.map((_, i) => {
+        const end = axisEnd(i);
+        return <line key={i} x1={cx} y1={cy} x2={end.x} y2={end.y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,2"/>;
+      })}
+
+      {/* 데이터 폴리곤 */}
+      <polygon
+        points={polygon}
+        fill="#1a3a5c"
+        fillOpacity="0.18"
+        stroke="#1a3a5c"
+        strokeWidth="2"
+      />
+
+      {/* 데이터 포인트 */}
+      {dataPoints.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="4" fill="#1a3a5c" stroke="white" strokeWidth="1.5"/>
+      ))}
+
+      {/* 레이블 */}
+      {keys.map((k, i) => {
+        const end = axisEnd(i);
+        const lx = cx + (maxR + 20) * Math.cos((i / n) * 2 * Math.PI - Math.PI / 2);
+        const ly = cy + (maxR + 20) * Math.sin((i / n) * 2 * Math.PI - Math.PI / 2);
+        const textAnchor = lx < cx - 5 ? 'end' : lx > cx + 5 ? 'start' : 'middle';
+        const score = vals[i];
+        return (
+          <g key={k}>
+            <text x={lx} y={ly} textAnchor={textAnchor} className="radar-label" dominantBaseline="middle">
+              {k}
+            </text>
+            <text x={lx} y={ly + 13} textAnchor={textAnchor} fontSize="10" fill="#1a3a5c" fontWeight="600" dominantBaseline="middle">
+              {score}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   Chart.js 래퍼 — 라인 차트
+   ═══════════════════════════════════════════════════════ */
+
+function LineChart({ cadet, metric }) {
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
+  // P0 — 4주 후 AI 예측값 계산 (실측 마지막 주차 추세 선형 투영 + 더미 오프셋)
+  const predictWeeks = ['W9','W10','W11','W12'];
+  const computePrediction = (arr, isReverse) => {
+    const n = arr.length;
+    // 마지막 4주 평균 변화량
+    const delta4 = (arr[n-1] - arr[n-4]) / 3;
+    // 예측: 마지막값 + delta * step, isReverse(달리기)는 개선 폭 약간 둔화
+    return predictWeeks.map((_, i) => {
+      const raw = arr[n-1] + delta4 * (i + 1) * (isReverse ? 0.7 : 0.85);
+      return Math.round(raw * 10) / 10;
+    });
+  };
+
+  const metricMap = {
+    run1500:  { label: '실측 (달리기, 분)', data: cadet.run1500, color: '#2d6a9f', reverse: true,
+                target: cadet.targetRun, predict: computePrediction(cadet.run1500, true) },
+    pushup:   { label: '실측 (팔굽혀펴기, 회)', data: cadet.pushup, color: '#059669',
+                target: cadet.targetPushup, predict: computePrediction(cadet.pushup, false) },
+    situp:    { label: '실측 (윗몸, 회)', data: cadet.situp, color: '#7c3aed',
+                target: cadet.targetSitup, predict: computePrediction(cadet.situp, false) },
+    hrAvg:    { label: '실측 (심박수, bpm)', data: cadet.hrAvg, color: '#dc2626', target: null, predict: null },
+    sleepH:   { label: '실측 (수면, h)',    data: cadet.sleepH, color: '#0284c7', target: null, predict: null },
+  };
+
+  const m = metricMap[metric] || metricMap.run1500;
+  // 실측 8주 + 예측 4주 합산 레이블
+  const allLabels = [...WEEKS, ...(m.predict ? predictWeeks : [])];
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const ctx = canvasRef.current.getContext('2d');
+
+    // 실측 데이터: 8주 + null 4주 (예측 구간 공백)
+    const actualData = m.predict
+      ? [...m.data, null, null, null, null]
+      : [...m.data];
+
+    const datasets = [{
+      label: m.label,
+      data: actualData,
+      borderColor: m.color,
+      backgroundColor: m.color + '18',
+      fill: true,
+      tension: 0.35,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2.5,
+      spanGaps: false,
+    }];
+
+    // P0 예측선: W8 마지막 실측값 → 예측 4주 점선
+    if (m.predict) {
+      // 연결 브리지: W8값 포함한 예측 데이터
+      const bridgeData = Array(WEEKS.length - 1).fill(null)
+        .concat([m.data[m.data.length - 1]])
+        .concat(m.predict);
+      datasets.push({
+        label: 'AI 예측 (4주)',
+        data: bridgeData,
+        borderColor: '#e8a020',
+        backgroundColor: '#e8a02015',
+        fill: false,
+        tension: 0.3,
+        borderDash: [6, 4],
+        borderWidth: 2,
+        pointRadius: (ctx) => ctx.dataIndex >= WEEKS.length ? 4 : 0,
+        pointBackgroundColor: '#e8a020',
+        pointBorderColor: 'white',
+        pointBorderWidth: 1.5,
+        spanGaps: true,
+      });
+    }
+
+    // 목표선
+    if (m.target !== null && m.target !== undefined) {
+      datasets.push({
+        label: '목표',
+        data: Array(allLabels.length).fill(m.target),
+        borderColor: '#94a3b8',
+        backgroundColor: 'transparent',
+        fill: false,
+        borderDash: [3, 3],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+      });
+    }
+
+    chartRef.current = new Chart(ctx, {
+      type: 'line',
+      data: { labels: allLabels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              font: { family: 'Pretendard Variable', size: 10 },
+              color: '#64748b',
+              boxWidth: 18,
+              padding: 8,
+              filter: (item) => item.text !== '목표' || m.target !== null,
+            },
+          },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            titleFont: { family: 'Pretendard Variable', size: 12 },
+            bodyFont: { family: 'Pretendard Variable', size: 13 },
+            padding: 10,
+          },
+          // 예측 구간 배경 강조 플러그인 (순수 annotate 대신 afterDraw)
+          annotation: false,
+        },
+        scales: {
+          x: {
+            grid: { color: (ctx) => ctx.index >= WEEKS.length ? '#fef3c7' : '#f1f5f9' },
+            ticks: {
+              font: { family: 'Pretendard Variable', size: 10 },
+              color: (ctx) => ctx.index >= WEEKS.length ? '#e8a020' : '#94a3b8',
+            },
+          },
+          y: {
+            reverse: !!m.reverse,
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { family: 'Pretendard Variable', size: 11 }, color: '#94a3b8' },
+          },
+        },
+      },
+    });
+    return () => { if (chartRef.current) chartRef.current.destroy(); };
+  }, [cadet.id, metric]);
+
+  return (
+    <div className="chart-container" style={{ height: '165px' }}>
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   화면 1 — 개인 체력 시뮬레이션
+   ═══════════════════════════════════════════════════════ */
+
+function SimulationScreen() {
+  const [selectedId, setSelectedId] = useState('C001');
+  const [chartMetric, setChartMetric] = useState('run1500');
+  const cadet = CADETS.find(c => c.id === selectedId);
+
+  const riskBadge = {
+    '낮음': <span className="badge-safe inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"><IconCheck size={12}/>낮음</span>,
+    '주의': <span className="badge-warn inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"><IconAlert size={12}/>주의</span>,
+    '위험': <span className="badge-danger inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold animate-risk"><IconAlert size={12}/>위험</span>,
+  };
+
+  const metrics = [
+    { key: 'run1500', label: '달리기' },
+    { key: 'pushup',  label: '팔굽혀펴기' },
+    { key: 'situp',   label: '윗몸일으키기' },
+    { key: 'hrAvg',   label: '심박수' },
+    { key: 'sleepH',  label: '수면' },
+  ];
+
+  // 현재 최신 주 값
+  const latestRun    = cadet.run1500[cadet.run1500.length - 1];
+  const latestPushup = cadet.pushup[cadet.pushup.length - 1];
+  const latestSitup  = cadet.situp[cadet.situp.length - 1];
+
+  // P0-3: 달리기는 낮을수록 좋으므로 달성/미달 판정을 명확히
+  const runAchieved  = latestRun <= cadet.targetRun;  // 목표 이하면 달성
+  const runPct       = Math.round(Math.min(100, (cadet.targetRun / latestRun) * 100));
+  const pushupPct    = Math.round(Math.min(100, (latestPushup / cadet.targetPushup) * 100));
+  const situpPct     = Math.round(Math.min(100, (latestSitup  / cadet.targetSitup)  * 100));
+
+  return (
+    <div className="flex gap-4 p-4 h-full overflow-hidden">
+
+      {/* 좌측 생도 선택 패널 */}
+      <div className="w-48 flex-shrink-0 bg-white rounded-lg border border-slate-200 flex flex-col overflow-hidden">
+        <div className="section-header px-3 pt-3">생도 선택</div>
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
+          {CADETS.map(c => (
+            <div
+              key={c.id}
+              className={`cadet-row px-2 py-2 rounded text-sm mb-0.5 ${selectedId === c.id ? 'selected' : ''}`}
+              onClick={() => setSelectedId(c.id)}
+            >
+              <div className="font-semibold text-slate-700">{c.name}</div>
+              <div className="text-xs text-slate-400">{c.grade} · {c.company}</div>
+              <div className="mt-1">
+                {c.riskLabel === '위험' && (
+                  <span className="badge-danger text-xs px-1 py-0.5 rounded inline-flex items-center gap-0.5">
+                    <IconAlert size={10}/>위험
+                  </span>
+                )}
+                {c.riskLabel === '주의' && (
+                  <span className="badge-warn text-xs px-1 py-0.5 rounded">주의</span>
+                )}
+                {c.riskLabel === '낮음' && (
+                  <span className="badge-safe text-xs px-1 py-0.5 rounded">양호</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-3 py-2 border-t border-slate-100 text-xs text-slate-400 flex items-center gap-1">
+          <IconWatch/> 갤럭시워치 연동
+        </div>
+      </div>
+
+      {/* 중앙 메인 영역 */}
+      <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0">
+
+        {/* 생도 헤더 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-navy-600 flex items-center justify-center text-white font-bold text-sm">
+            {cadet.name.slice(-3)}
+          </div>
+          <div>
+            <div className="text-lg font-bold text-slate-800">{cadet.name}</div>
+            <div className="text-sm text-slate-500">{cadet.grade} · {cadet.company} · {cadet.height}cm / {cadet.weight}kg</div>
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-xs text-slate-400 mb-1">AI 부상 위험도</div>
+              {riskBadge[cadet.riskLabel]}
+            </div>
+            <CircleGauge value={cadet.injuryRisk} label="위험도" size={72}
+              color={cadet.riskLabel === '낮음' ? '#27ae60' : cadet.riskLabel === '주의' ? '#e67e22' : '#c0392b'}
+            />
+          </div>
+        </div>
+
+        {/* 3종 측정 목표 달성도 */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* P1-3: 3종 카드 구조 통일 — 달리기 중복 제거, 팔굽·윗몸에 달성/미달 배지 추가 */}
+          {[
+            {
+              label: '1500m 달리기', icon: <IconRun/>, color: '#2d6a9f',
+              current: latestRun, unit: '분', target: cadet.targetRun, targetUnit: '분',
+              pct: runPct,
+              achieved: runAchieved,
+              note: '낮을수록 우수',
+            },
+            {
+              label: '팔굽혀펴기', icon: <IconPush/>, color: '#059669',
+              current: latestPushup, unit: '회', target: cadet.targetPushup, targetUnit: '회',
+              pct: pushupPct,
+              achieved: latestPushup >= cadet.targetPushup,
+              note: '높을수록 우수',
+            },
+            {
+              label: '윗몸일으키기', icon: <IconSitup/>, color: '#7c3aed',
+              current: latestSitup, unit: '회', target: cadet.targetSitup, targetUnit: '회',
+              pct: situpPct,
+              achieved: latestSitup >= cadet.targetSitup,
+              note: '높을수록 우수',
+            },
+          ].map(card => (
+            <div key={card.label} className="kpi-card">
+              <div className="flex items-center gap-2 mb-2">
+                <span style={{ color: card.color }}>{card.icon}</span>
+                <span className="text-sm font-semibold text-slate-700">{card.label}</span>
+                {card.achieved
+                  ? <span className="ml-auto text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">달성</span>
+                  : <span className="ml-auto text-xs font-semibold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">미달</span>
+                }
+              </div>
+              <div className="flex justify-between items-end mb-1.5">
+                <div>
+                  <div className="text-2xl font-bold" style={{ color: card.achieved ? '#27ae60' : card.color }}>
+                    {card.current}<span className="text-sm font-normal text-slate-400">{card.unit}</span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">목표 {card.target}{card.targetUnit} · {card.pct}% 달성</div>
+                </div>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className="h-2 rounded-full transition-all duration-700"
+                  style={{ width: `${Math.min(100, card.pct)}%`, backgroundColor: card.achieved ? '#27ae60' : card.color }} />
+              </div>
+              <div className="text-xs text-slate-400 mt-1">{card.note}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* P0: AI 시뮬레이션 예측 카드 */}
+        {(() => {
+          const latR = cadet.run1500[cadet.run1500.length - 1];
+          const predR = Math.round((latR + (cadet.run1500[cadet.run1500.length-1] - cadet.run1500[cadet.run1500.length-4]) / 3 * 4 * 0.7) * 10) / 10;
+          const predRisk = Math.max(0, Math.round(cadet.injuryRisk * 0.72));
+          const latPu = cadet.pushup[cadet.pushup.length - 1];
+          const predPu = Math.round(latPu + (cadet.pushup[cadet.pushup.length-1] - cadet.pushup[cadet.pushup.length-4]) / 3 * 4 * 0.85);
+          return (
+            <div className="bg-white rounded-lg border-2 border-accent/40 p-3 relative overflow-hidden">
+              {/* 배경 강조 */}
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-50/60 to-transparent pointer-events-none"/>
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8a020" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">AI 시뮬레이션 — 현 훈련 강도 유지 시 4주 후 예측</span>
+                  <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">ETRI 모델 투영</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-white rounded p-2 border border-amber-100">
+                    <div className="text-xs text-slate-500 mb-1">달리기</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400 text-sm font-mono">{latR}분</span>
+                      <span className="text-slate-300">→</span>
+                      <span className={`font-bold text-base ${predR < latR ? 'text-green-600' : 'text-red-600'}`}>{predR}분</span>
+                    </div>
+                    <div className={`text-xs mt-0.5 ${predR < latR ? 'text-green-600' : 'text-red-500'}`}>
+                      {predR < latR ? `▼ ${(latR - predR).toFixed(1)}분 개선 예측` : `▲ ${(predR - latR).toFixed(1)}분 악화 예측`}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded p-2 border border-amber-100">
+                    <div className="text-xs text-slate-500 mb-1">팔굽혀펴기</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400 text-sm font-mono">{latPu}회</span>
+                      <span className="text-slate-300">→</span>
+                      <span className={`font-bold text-base ${predPu > latPu ? 'text-green-600' : 'text-red-600'}`}>{predPu}회</span>
+                    </div>
+                    <div className={`text-xs mt-0.5 ${predPu > latPu ? 'text-green-600' : 'text-red-500'}`}>
+                      {predPu > latPu ? `▲ ${predPu - latPu}회 향상 예측` : `▼ ${latPu - predPu}회 감소 예측`}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded p-2 border border-amber-100">
+                    <div className="text-xs text-slate-500 mb-1">부상 위험도</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400 text-sm font-mono">{cadet.injuryRisk}%</span>
+                      <span className="text-slate-300">→</span>
+                      <span className={`font-bold text-base ${predRisk < cadet.injuryRisk ? 'text-green-600' : 'text-red-600'}`}>{predRisk}%</span>
+                    </div>
+                    <div className={`text-xs mt-0.5 ${predRisk < cadet.injuryRisk ? 'text-green-600' : 'text-red-500'}`}>
+                      {predRisk < cadet.injuryRisk ? `▼ ${cadet.injuryRisk - predRisk}%p 위험 감소 예측` : `▲ ${predRisk - cadet.injuryRisk}%p 위험 증가`}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-400 mt-1.5">※ 더미 데이터 기반 예측 · 실제 배포 시 ETRI AI 모델 API 연동</div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 시계열 차트 — P0: 예측 구간 포함 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="section-header mb-0">실측 8주 + AI 예측 4주</div>
+            <div className="flex gap-1">
+              {metrics.map(m => (
+                <button
+                  key={m.key}
+                  onClick={() => setChartMetric(m.key)}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                    chartMetric === m.key
+                      ? 'bg-navy-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <LineChart cadet={cadet} metric={chartMetric} />
+          <div className="text-xs text-slate-400 mt-2 flex items-center gap-2">
+            <IconWatch/>
+            실측: 웨어러블 워치 + 스마트 운동기구 (시계열 JSON) · 8주
+            <span className="text-amber-500 font-medium">| W9~W12: ETRI AI 예측선 (점선)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 우측 패널 — 레이더 + 처방 */}
+      <div className="w-56 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
+
+        {/* 아바타 — P1: 체형 배지 + 어깨너비 수치 추가 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <div className="section-header">디지털 트윈 아바타</div>
+          {/* 체형 배지 */}
+          <div className="flex justify-center mb-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-navy-50 text-navy-600 border border-navy-200">
+              <span className="w-2 h-2 rounded-full bg-navy-500 inline-block"/>
+              체형 {cadet.bodyType}타입
+              {cadet.bodyType === 'A' && ' (근육형)'}
+              {cadet.bodyType === 'B' && ' (표준형)'}
+              {cadet.bodyType === 'C' && ' (슬림형)'}
+            </span>
+          </div>
+          <AvatarSVG bodyType={cadet.bodyType} riskLevel={cadet.riskLabel} height={cadet.height} weight={cadet.weight} />
+          <div className="text-center mt-1 text-xs text-slate-400">
+            {cadet.height}cm · {cadet.weight}kg · 어깨폭 {cadet.bodyType === 'A' ? '넓음' : cadet.bodyType === 'B' ? '보통' : '좁음'}
+          </div>
+        </div>
+
+        {/* 레이더 차트 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <div className="section-header">체력 종합 분석</div>
+          <RadarChart scores={cadet.radarScores} size={200} />
+        </div>
+
+        {/* AI 처방 카드 — P2: XAI 근거 태그 추가 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <div className="section-header">AI 맞춤 처방</div>
+          <div className={`text-xs leading-relaxed rounded p-2 mb-2 ${
+            cadet.riskLabel === '위험' ? 'bg-red-50 text-red-800 border border-red-200' :
+            cadet.riskLabel === '주의' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+            'bg-green-50 text-green-800 border border-green-200'
+          }`}>
+            {cadet.prescription}
+          </div>
+          {/* XAI 주요 위험 요인 근거 */}
+          <div className="text-xs text-slate-500 mb-1 font-semibold">주요 위험 요인 (XAI 근거)</div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {cadet.riskLabel === '위험' && <>
+              <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">심박수 ↑ (위험)</span>
+              <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">수면 부족</span>
+              <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-xs">체력 저하 추이</span>
+            </>}
+            {cadet.riskLabel === '주의' && <>
+              <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-xs">심폐지구력 ↓</span>
+              <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-xs">유연성 부족</span>
+            </>}
+            {cadet.riskLabel === '낮음' && <>
+              <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">정상 범위</span>
+              <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">개선 목표 있음</span>
+            </>}
+          </div>
+          <div className="flex justify-between text-xs text-slate-400">
+            <span>ETRI 부상예측 v2.1</span>
+            <span className="font-semibold text-slate-500">신뢰도 {cadet.riskLabel === '위험' ? '91' : cadet.riskLabel === '주의' ? '87' : '83'}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   화면 2 — 훈육관/교관 모니터링 대시보드
+   ═══════════════════════════════════════════════════════ */
+
+function DashboardScreen() {
+  const [sortKey, setSortKey]       = useState('name');
+  const [sortAsc, setSortAsc]       = useState(true);
+  const [filterRisk, setFilterRisk] = useState('전체');
+  const [filterComp, setFilterComp] = useState('전체');
+  const [searchQ, setSearchQ]       = useState('');
+
+  const barCanvasRef = useRef(null);
+  const barChartRef  = useRef(null);
+
+  // KPI 집계
+  const totalCadets = CADETS.length;
+  const dangerCount = CADETS.filter(c => c.riskLabel === '위험').length;
+  const warnCount   = CADETS.filter(c => c.riskLabel === '주의').length;
+  const avgRun      = (CADETS.reduce((s, c) => s + c.run1500[c.run1500.length - 1], 0) / totalCadets).toFixed(1);
+  const avgPushup   = Math.round(CADETS.reduce((s, c) => s + c.pushup[c.pushup.length - 1], 0) / totalCadets);
+
+  // 부대별 평균 달리기 차트
+  const companies = ['1중대', '2중대', '3중대', '4중대'];
+  const compAvgRun = companies.map(co => {
+    const group = CADETS.filter(c => c.company === co);
+    if (!group.length) return 0;
+    return (group.reduce((s, c) => s + c.run1500[c.run1500.length - 1], 0) / group.length).toFixed(2);
+  });
+
+  useEffect(() => {
+    if (!barCanvasRef.current) return;
+    if (barChartRef.current) barChartRef.current.destroy();
+    const ctx = barCanvasRef.current.getContext('2d');
+    barChartRef.current = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: companies,
+        datasets: [{
+          label: '평균 달리기 (분)',
+          data: compAvgRun,
+          backgroundColor: ['#1a3a5c','#2d6a9f','#4e83b9','#7aa2cb'],
+          borderRadius: 5,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            titleFont: { family: 'Pretendard Variable', size: 11 },
+            bodyFont: { family: 'Pretendard Variable', size: 12 },
+          },
+        },
+        scales: {
+          x: { ticks: { font: { family: 'Pretendard Variable', size: 11 }, color: '#94a3b8' }, grid: { display: false } },
+          y: {
+            reverse: true, // 낮을수록 좋음
+            ticks: { font: { family: 'Pretendard Variable', size: 11 }, color: '#94a3b8' },
+            grid: { color: '#f1f5f9' },
+          },
+        },
+      },
+    });
+    return () => { if (barChartRef.current) barChartRef.current.destroy(); };
+  }, []);
+
+  // 필터 & 정렬
+  const filtered = CADETS
+    .filter(c => filterRisk === '전체' || c.riskLabel === filterRisk)
+    .filter(c => filterComp === '전체' || c.company === filterComp)
+    .filter(c => !searchQ || c.name.includes(searchQ) || c.id.includes(searchQ))
+    .sort((a, b) => {
+      let va, vb;
+      if (sortKey === 'name')    { va = a.name; vb = b.name; }
+      else if (sortKey === 'risk') { const o = {'위험':0,'주의':1,'낮음':2}; va = o[a.riskLabel]; vb = o[b.riskLabel]; }
+      else if (sortKey === 'run')  { va = a.run1500[a.run1500.length-1]; vb = b.run1500[b.run1500.length-1]; }
+      else if (sortKey === 'push') { va = -a.pushup[a.pushup.length-1]; vb = -b.pushup[b.pushup.length-1]; }
+      else if (sortKey === 'sit')  { va = -a.situp[a.situp.length-1]; vb = -b.situp[b.situp.length-1]; }
+      else { va = a.injuryRisk; vb = b.injuryRisk; }
+      return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
+
+  const handleSort = (key) => {
+    if (sortKey === key) setSortAsc(p => !p);
+    else { setSortKey(key); setSortAsc(true); }
+  };
+  const SortIcon = ({ k }) => (
+    <span className="ml-1 text-slate-400 text-xs">{sortKey === k ? (sortAsc ? '▲' : '▼') : '⇅'}</span>
+  );
+
+  const riskRow = {
+    '위험': 'bg-red-50 border-l-4 border-red-500',
+    '주의': 'bg-amber-50 border-l-2 border-amber-400',
+    '낮음': '',
+  };
+  const riskBadge = {
+    '낮음': <span className="badge-safe text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-0.5"><IconCheck size={10}/>낮음</span>,
+    '주의': <span className="badge-warn text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-0.5"><IconAlert size={10}/>주의</span>,
+    '위험': <span className="badge-danger text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 animate-risk"><IconAlert size={10}/>위험</span>,
+  };
+
+  return (
+    <div className="flex flex-col gap-4 p-4 h-full overflow-y-auto">
+
+      {/* KPI 카드 행 — P1+P2 수정: trend 방향 정합, 위험군 화살표 제거→배경색, 표본 명시 */}
+      <div className="grid grid-cols-5 gap-3">
+        {/* 총 생도 (표본 명시) */}
+        <div className="kpi-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500">총 생도 수</span>
+            <span style={{ color: '#1a3a5c' }}><IconUsers/></span>
+          </div>
+          <div className="flex items-end gap-1">
+            <span className="text-2xl font-bold" style={{ color: '#1a3a5c' }}>{totalCadets}</span>
+            <span className="text-sm text-slate-400 mb-0.5">명</span>
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">전체 800명 중 표본</div>
+        </div>
+        {/* 위험군 — 화살표 제거, dangerCount>0 시 bg-red-50 강조 */}
+        <div className={`kpi-card ${dangerCount > 0 ? 'bg-red-50 border-red-200' : ''}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500">위험군</span>
+            <span style={{ color: '#c0392b' }}><IconAlert size={16}/></span>
+          </div>
+          <div className="flex items-end gap-1">
+            <span className="text-2xl font-bold" style={{ color: '#c0392b' }}>{dangerCount}</span>
+            <span className="text-sm text-slate-400 mb-0.5">명</span>
+          </div>
+          {dangerCount > 0 && <div className="text-xs text-red-500 mt-0.5 font-semibold">즉시 점검 필요</div>}
+        </div>
+        {/* 주의군 */}
+        <div className={`kpi-card ${warnCount > 0 ? 'bg-amber-50 border-amber-200' : ''}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500">주의군</span>
+            <span style={{ color: '#e67e22' }}><IconAlert size={16}/></span>
+          </div>
+          <div className="flex items-end gap-1">
+            <span className="text-2xl font-bold" style={{ color: '#e67e22' }}>{warnCount}</span>
+            <span className="text-sm text-slate-400 mb-0.5">명</span>
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">모니터링 요</div>
+        </div>
+        {/* 평균 달리기 — 낮을수록 우수이므로 초록 상향 화살표(= 낮아짐=개선) */}
+        <div className="kpi-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500">평균 달리기</span>
+            <span style={{ color: '#2d6a9f' }}><IconRun/></span>
+          </div>
+          <div className="flex items-end gap-1">
+            <span className="text-2xl font-bold" style={{ color: '#2d6a9f' }}>{avgRun}</span>
+            <span className="text-sm text-slate-400 mb-0.5">분</span>
+            <span className="ml-auto"><IconTrend up={true}/></span>
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">↓ 낮을수록 우수</div>
+        </div>
+        {/* 평균 팔굽혀펴기 */}
+        <div className="kpi-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500">평균 팔굽혀펴기</span>
+            <span style={{ color: '#059669' }}><IconPush/></span>
+          </div>
+          <div className="flex items-end gap-1">
+            <span className="text-2xl font-bold" style={{ color: '#059669' }}>{avgPushup}</span>
+            <span className="text-sm text-slate-400 mb-0.5">회</span>
+            <span className="ml-auto"><IconTrend up={true}/></span>
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">↑ 높을수록 우수</div>
+        </div>
+      </div>
+
+      {/* 차트 + 알림 영역 */}
+      <div className="grid grid-cols-3 gap-4">
+
+        {/* P1-4+P2: 중대별 달리기 평균 — height 압축 + 타이틀에 방향 힌트 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <div className="section-header">중대별 달리기 (↓낮을수록 우수)</div>
+          <div style={{ height: '110px' }}>
+            <canvas ref={barCanvasRef}/>
+          </div>
+          <div className="text-xs text-slate-400 mt-0.5">y축 역순 · 낮은 막대 = 우수 중대</div>
+        </div>
+
+        {/* 부상 위험도 분포 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <div className="section-header">부상 위험도 분포</div>
+          <div className="flex flex-col gap-3 mt-2">
+            {[
+              { label: '낮음 (0~30)', count: CADETS.filter(c => c.injuryRisk < 30).length, color: '#27ae60', bg: '#dcfce7' },
+              { label: '주의 (30~60)', count: CADETS.filter(c => c.injuryRisk >= 30 && c.injuryRisk < 60).length, color: '#e67e22', bg: '#fef3c7' },
+              { label: '위험 (60~100)', count: CADETS.filter(c => c.injuryRisk >= 60).length, color: '#c0392b', bg: '#fee2e2' },
+            ].map(d => (
+              <div key={d.label} className="flex items-center gap-2">
+                <div className="text-xs text-slate-600 w-28">{d.label}</div>
+                <div className="flex-1 bg-slate-100 rounded-full h-3">
+                  <div className="h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${(d.count / totalCadets) * 100}%`, backgroundColor: d.color }}/>
+                </div>
+                <div className="text-sm font-bold w-8 text-right" style={{ color: d.color }}>{d.count}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 p-2 bg-slate-50 rounded text-xs text-slate-500 leading-relaxed">
+            위험군 비율: <strong className="text-red-600">{Math.round((dangerCount/totalCadets)*100)}%</strong> —
+            즉시 의료 검진 및 훈련 강도 조정 필요
+          </div>
+        </div>
+
+        {/* 긴급 알림 패널 */}
+        <div className="bg-white rounded-lg border border-slate-200 p-3">
+          <div className="section-header flex items-center gap-1">
+            <IconAlert size={13}/> 부상 위험 알림
+          </div>
+          <div className="flex flex-col gap-2">
+            {CADETS.filter(c => c.riskLabel !== '낮음')
+              .sort((a,b) => b.injuryRisk - a.injuryRisk)
+              .map(c => (
+              <div key={c.id} className={`p-2 rounded text-xs ${
+                c.riskLabel === '위험' ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-slate-700">{c.name}</span>
+                  {riskBadge[c.riskLabel]}
+                </div>
+                <div className="text-slate-500 mt-0.5">{c.grade} · {c.company} · 위험도 {c.injuryRisk}%</div>
+                {/* P1: truncation 65자 — 핵심 권고 살림 */}
+                <div className={`mt-0.5 text-xs leading-relaxed ${c.riskLabel === '위험' ? 'text-red-700' : 'text-amber-700'}`}>
+                  {c.prescription.length > 65 ? c.prescription.substring(0, 65) + '…' : c.prescription}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 생도 테이블 */}
+      <div className="bg-white rounded-lg border border-slate-200 flex flex-col">
+        {/* 필터 바 */}
+        <div className="flex items-center gap-3 p-3 border-b border-slate-100">
+          <span className="section-header mb-0 mr-2">생도 현황</span>
+          <input
+            type="text"
+            placeholder="이름/ID 검색"
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+            className="border border-slate-200 rounded px-2 py-1 text-xs w-32 focus:outline-none focus:border-navy-400"
+          />
+          <select
+            value={filterRisk}
+            onChange={e => setFilterRisk(e.target.value)}
+            className="border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-navy-400"
+          >
+            <option>전체</option><option>낮음</option><option>주의</option><option>위험</option>
+          </select>
+          <select
+            value={filterComp}
+            onChange={e => setFilterComp(e.target.value)}
+            className="border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-navy-400"
+          >
+            <option>전체</option>
+            {companies.map(c => <option key={c}>{c}</option>)}
+          </select>
+          <span className="ml-auto text-xs text-slate-400">{filtered.length}명 표시</span>
+        </div>
+
+        {/* 테이블 헤더 */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-slate-50 text-slate-500 text-left">
+                <th className="px-3 py-2 font-semibold cursor-pointer hover:text-slate-700" onClick={() => handleSort('name')}>
+                  생도 <SortIcon k="name"/>
+                </th>
+                <th className="px-3 py-2 font-semibold">학년/중대</th>
+                <th className="px-3 py-2 font-semibold cursor-pointer hover:text-slate-700" onClick={() => handleSort('risk')}>
+                  위험도 <SortIcon k="risk"/>
+                </th>
+                <th className="px-3 py-2 font-semibold cursor-pointer hover:text-slate-700" onClick={() => handleSort('run')}>
+                  달리기(분) <SortIcon k="run"/>
+                </th>
+                <th className="px-3 py-2 font-semibold cursor-pointer hover:text-slate-700" onClick={() => handleSort('push')}>
+                  팔굽(회) <SortIcon k="push"/>
+                </th>
+                <th className="px-3 py-2 font-semibold cursor-pointer hover:text-slate-700" onClick={() => handleSort('sit')}>
+                  윗몸(회) <SortIcon k="sit"/>
+                </th>
+                <th className="px-3 py-2 font-semibold cursor-pointer hover:text-slate-700" onClick={() => handleSort('injuryRisk')}>위험% <SortIcon k="injuryRisk"/></th>
+                <th className="px-3 py-2 font-semibold">주간 수면(h)</th>
+                <th className="px-3 py-2 font-semibold">AI 처방 요약</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(c => {
+                const latR  = c.run1500[c.run1500.length - 1];
+                const latPu = c.pushup[c.pushup.length - 1];
+                const latSu = c.situp[c.situp.length - 1];
+                const latSl = c.sleepH[c.sleepH.length - 1];
+                const prevR  = c.run1500[c.run1500.length - 2];
+                const prevPu = c.pushup[c.pushup.length - 2];
+                const prevSu = c.situp[c.situp.length - 2]; // P0-2
+                return (
+                  <tr key={c.id} className={`cadet-row border-b border-slate-50 ${riskRow[c.riskLabel]}`}>
+                    <td className="px-3 py-2 font-semibold text-slate-700">{c.name}</td>
+                    <td className="px-3 py-2 text-slate-500">{c.grade} · {c.company}</td>
+                    <td className="px-3 py-2">{riskBadge[c.riskLabel]}</td>
+                    <td className="px-3 py-2">
+                      <span className="font-mono">{latR}</span>
+                      <span className="ml-1"><IconTrend up={latR < prevR}/></span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="font-mono">{latPu}</span>
+                      <span className="ml-1"><IconTrend up={latPu > prevPu}/></span>
+                    </td>
+                    {/* P0-2: 윗몸일으키기 추이 아이콘 추가 */}
+                    <td className="px-3 py-2">
+                      <span className="font-mono">{latSu}</span>
+                      <span className="ml-1"><IconTrend up={latSu > prevSu}/></span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1">
+                        <div className="w-12 bg-slate-100 rounded-full h-1.5">
+                          <div className="h-1.5 rounded-full"
+                            style={{
+                              width: `${c.injuryRisk}%`,
+                              backgroundColor: c.injuryRisk < 30 ? '#27ae60' : c.injuryRisk < 60 ? '#e67e22' : '#c0392b'
+                            }}/>
+                        </div>
+                        <span className="font-mono text-slate-600">{c.injuryRisk}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-slate-600">{latSl}h</td>
+                    <td className="px-3 py-2 text-slate-500 max-w-xs">
+                      <span className="truncate block" style={{ maxWidth: '200px' }}>
+                        {c.prescription.substring(0, 45)}{c.prescription.length > 45 ? '…' : ''}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 테이블 푸터 */}
+        <div className="px-3 py-2 border-t border-slate-100 text-xs text-slate-400 flex items-center gap-2">
+          <IconWatch/>
+          데이터 출처: 갤럭시워치 800대 + 스마트 운동기구 시계열 CSV · 최근 측정기준 · O(일반)등급 비식별화
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   메인 앱 — 타이틀바 + 사이드 네비 + 컨텐츠
+   ═══════════════════════════════════════════════════════ */
+
+function App() {
+  const [activeTab, setActiveTab] = useState('simulation');
+
+  const navItems = [
+    {
+      key: 'simulation',
+      label: '개인 시뮬레이션',
+      sublabel: '디지털 트윈 · 체력 예측',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      ),
+    },
+    {
+      key: 'dashboard',
+      label: '훈육관 대시보드',
+      sublabel: '전체 모니터링 · 부상 알림',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-100">
+
+      {/* 타이틀바 — P1: Windows 데스크탑 앱 스타일 (최소화/최대화/닫기) */}
+      <div className="titlebar flex items-center px-0 py-0 flex-shrink-0" style={{ height: '44px' }}>
+        {/* 엠블럼 + 타이틀 (좌측) */}
+        <div className="flex items-center gap-2 px-4 flex-1">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L4 7v5c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V7L12 2z" fill="#e8a020" stroke="#b57d10" strokeWidth="0.5"/>
+            <text x="12" y="16" textAnchor="middle" fontSize="9" fill="white" fontWeight="bold" fontFamily="sans-serif">해군</text>
+          </svg>
+          <span className="text-white font-bold text-sm tracking-wide">해군사관학교 AI 체력관리 시스템</span>
+          <span className="text-slate-400 text-xs ml-1">— QJC</span>
+        </div>
+
+        {/* 우측 상태 + Windows 버튼 */}
+        <div className="flex items-center gap-3 text-xs text-slate-400 px-3">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-400 inline-block"/>
+            온프레미스 내부망
+          </span>
+          <span>O(일반)등급</span>
+          <span className="text-slate-500">2026-05-29</span>
+        </div>
+        {/* Windows 최소화/최대화/닫기 버튼 */}
+        <div className="flex items-stretch h-full border-l border-white/10 ml-2">
+          <button className="w-10 h-full flex items-center justify-center text-slate-300 hover:bg-white/10 transition-colors text-base leading-none" title="최소화">
+            &#8212;
+          </button>
+          <button className="w-10 h-full flex items-center justify-center text-slate-300 hover:bg-white/10 transition-colors" title="최대화">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <rect x="1" y="1" width="8" height="8"/>
+            </svg>
+          </button>
+          <button className="w-10 h-full flex items-center justify-center text-slate-300 hover:bg-red-600 hover:text-white transition-colors text-lg leading-none" title="닫기">
+            &#x2715;
+          </button>
+        </div>
+      </div>
+
+      {/* 메인 레이아웃 */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* 사이드 네비게이션 */}
+        <div className="w-52 flex-shrink-0 bg-navy-800 flex flex-col">
+
+          {/* 네비 아이템 */}
+          <nav className="flex-1 pt-3 px-2">
+            {navItems.map(item => (
+              <button
+                key={item.key}
+                onClick={() => setActiveTab(item.key)}
+                className={`w-full text-left px-3 py-3 rounded-lg mb-1 transition-colors flex items-start gap-2.5 ${
+                  activeTab === item.key
+                    ? 'bg-navy-600 text-white'
+                    : 'text-slate-400 hover:bg-navy-700 hover:text-slate-200'
+                }`}
+              >
+                <span className="mt-0.5 flex-shrink-0">{item.icon}</span>
+                <span>
+                  <span className="block text-sm font-semibold">{item.label}</span>
+                  <span className="block text-xs opacity-70 mt-0.5">{item.sublabel}</span>
+                </span>
+              </button>
+            ))}
+          </nav>
+
+          {/* 사이드 하단 */}
+          <div className="p-3 border-t border-navy-700">
+            <div className="text-xs text-slate-500 leading-relaxed">
+              <div className="flex items-center gap-1.5 mb-2">
+                <IconWatch/>
+                <span className="text-slate-400 font-medium">연동 현황</span>
+              </div>
+              <div className="flex justify-between"><span>갤럭시워치</span><span className="text-green-400 font-semibold">800대</span></div>
+              <div className="flex justify-between mt-0.5"><span>스마트 기구</span><span className="text-green-400 font-semibold">연결됨</span></div>
+              <div className="flex justify-between mt-0.5"><span>AI 엔진</span><span className="text-blue-400">ETRI v2.1</span></div>
+            </div>
+          </div>
+
+          {/* 컨소시엄 */}
+          <div className="p-3 border-t border-navy-700">
+            <div className="text-xs text-slate-600 leading-relaxed">
+              <div className="text-slate-400 font-medium mb-1">컨소시엄</div>
+              <div className="text-slate-500">오파스넷 · ETRI</div>
+              <div className="text-slate-500">레오케어 · <span className="text-accent font-semibold">QJC</span></div>
+            </div>
+          </div>
+        </div>
+
+        {/* 컨텐츠 영역 */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* 탭 헤더 */}
+          <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-700">
+              {activeTab === 'simulation' ? '디지털 트윈 기반 개인 체력 시뮬레이션' : '훈육관·교관용 훈련 지도 대시보드'}
+            </span>
+            <span className="ml-auto text-xs text-slate-400 flex items-center gap-1">
+              <IconWatch/>
+              데이터: 웨어러블 워치 + 스마트 운동기구 시계열 JSON/CSV
+            </span>
+          </div>
+
+          {/* 화면 전환 */}
+          <div className="flex-1 overflow-hidden">
+            {activeTab === 'simulation' ? <SimulationScreen /> : <DashboardScreen />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const container = document.getElementById('root');
+const root = ReactDOM.createRoot(container);
+root.render(<App />);
+</script>
+</body>
+</html>
